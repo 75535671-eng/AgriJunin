@@ -1,0 +1,38 @@
+<div class="auth-page">
+  <div class="auth-card card">
+    <div class="auth-card__header">
+      <span class="auth-card__logo">🌾</span>
+      <h1>AgriJunín</h1>
+      <p>Sistema de Agricultura Inteligente — Región Junín</p>
+    </div>
+
+    @if (error()) {
+      <div class="alert alert--error">{{ error() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" formControlName="email" [class.invalid]="isInvalid('email')" placeholder="correo@ejemplo.pe" />
+        @if (isInvalid('email')) {
+          <span class="error-msg">Ingrese un correo válido</span>
+        }
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" formControlName="password" [class.invalid]="isInvalid('password')" />
+        @if (isInvalid('password')) {
+          <span class="error-msg">Mínimo 6 caracteres</span>
+        }
+      </div>
+      <button type="submit" class="btn btn--primary auth-card__submit" [disabled]="loading()">
+        {{ loading() ? 'Ingresando...' : 'Iniciar sesión' }}
+      </button>
+    </form>
+
+    <p class="auth-card__footer">
+      ¿No tiene cuenta? <a routerLink="/auth/register">Registrarse</a>
+    </p>
+    <small class="auth-card__hint">Demo: admin@agrijunin.pe / Admin123!</small>
+  </div>
+</div>

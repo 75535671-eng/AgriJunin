@@ -1,0 +1,72 @@
+<app-page-header
+  title="Agricultores"
+  subtitle="Gestión de productores de la región Junín"
+  actionLabel="Nuevo agricultor"
+  [showAction]="auth.canEdit()"
+  (actionClick)="goNew()"
+/>
+
+<div class="toolbar card">
+  <input
+    type="search"
+    placeholder="Buscar por nombre, DNI o distrito..."
+    [ngModel]="searchTerm()"
+    (ngModelChange)="onSearch($event)"
+  />
+</div>
+
+@if (store.loading()) {
+  <p class="loading">Cargando...</p>
+} @else {
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>DNI</th>
+          <th>Nombres</th>
+          <th>Distrito</th>
+          <th>Hectáreas</th>
+          <th>Registro</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of store.items(); track item.id) {
+          <tr>
+            <td>{{ item.dni }}</td>
+            <td>{{ item.nombres }} {{ item.apellidos }}</td>
+            <td>{{ item.distrito }}</td>
+            <td>{{ item.hectareas_totales }} ha</td>
+            <td>{{ item.fecha_registro | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <span class="badge" [class.badge--success]="item.activo" [class.badge--danger]="!item.activo">
+                {{ item.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="actions">
+              @if (auth.canEdit()) {
+                <a [routerLink]="['/agricultores', item.id, 'editar']" class="btn btn--outline btn--sm">Editar</a>
+              }
+              @if (auth.isAdmin()) {
+                <button class="btn btn--danger btn--sm" (click)="deleteItem(item.id!)">Eliminar</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="empty">No hay agricultores registrados</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (store.pagination().totalPages > 1) {
+    <div class="pagination">
+      <button class="btn btn--outline btn--sm" [disabled]="store.pagination().page <= 1"
+        (click)="store.setPage(store.pagination().page - 1)">Anterior</button>
+      <span>Página {{ store.pagination().page }} de {{ store.pagination().totalPages }}</span>
+      <button class="btn btn--outline btn--sm" [disabled]="store.pagination().page >= store.pagination().totalPages"
+        (click)="store.setPage(store.pagination().page + 1)">Siguiente</button>
+    </div>
+  }
+}

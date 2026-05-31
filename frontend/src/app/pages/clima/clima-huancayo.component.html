@@ -1,0 +1,89 @@
+<div class="clima-page">
+  <header class="clima-page__header">
+    <div>
+      <h2>🌤️ Clima en tiempo real — Huancayo</h2>
+      <p>Datos meteorológicos reales vía Open-Meteo · Región Junín</p>
+    </div>
+    <div class="clima-page__actions">
+      <button class="btn btn--outline" (click)="refresh()" [disabled]="weather.loading()">
+        {{ weather.loading() ? 'Cargando...' : 'Actualizar' }}
+      </button>
+      @if (auth.canEdit()) {
+        <button class="btn btn--primary" (click)="sincronizar()" [disabled]="weather.syncing()">
+          {{ weather.syncing() ? 'Sincronizando...' : '↻ Sincronizar con sistema' }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (weather.error()) {
+    <div class="alert-error">{{ weather.error() }}</div>
+  }
+
+  @if (syncMessage()) {
+    <div class="alert-success">{{ syncMessage() }}</div>
+  }
+
+  @if (weather.loading() && !weather.clima()) {
+    <p class="loading">Obteniendo clima de Huancayo...</p>
+  } @else if (weather.clima(); as c) {
+    <app-clima-widget [clima]="c" />
+
+    @if (auth.canEdit()) {
+      <div class="card sync-card">
+        <h3>Sincronizar con lotes y sensores</h3>
+        <p>Importa temperatura, humedad y lluvia reales a registros agrícolas y actualiza sensores del lote.</p>
+        <div class="form-group">
+          <label>Lote destino (opcional)</label>
+          <select [ngModel]="loteSeleccionado()" (ngModelChange)="loteSeleccionado.set($event ? +$event : undefined)">
+            <option [ngValue]="undefined">Automático (Lote Huancayo)</option>
+            @for (l of lookup.lotes(); track l.id) {
+              <option [value]="l.id">{{ l.codigo_lote }} — {{ l.nombre }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+
+    <div class="clima-grid">
+      <div class="card">
+        <h3>Pronóstico 7 días</h3>
+        <div class="forecast-days">
+          @for (d of c.pronosticoDiario; track d.fecha) {
+            <div class="forecast-day">
+              <span class="forecast-day__date">{{ d.fecha | date:'EEE dd/MM' }}</span>
+              <span class="forecast-day__desc">{{ d.descripcion }}</span>
+              <span class="forecast-day__temp">{{ d.temp_max | number:'1.0-0' }}° / {{ d.temp_min | number:'1.0-0' }}°</span>
+              <span class="forecast-day__rain">🌧 {{ d.precipitacion_mm }} mm</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Próximas 24 horas</h3>
+        <div class="hourly-chart">
+          @for (h of c.pronosticoHorario; track h.hora) {
+            <div class="hourly-item">
+              <div class="hourly-bar-wrap">
+                <div class="hourly-bar" [style.height]="barTemp(h.temperatura)"></div>
+              </div>
+              <span class="hourly-temp">{{ h.temperatura | number:'1.0-0' }}°</span>
+              <span class="hourly-time">{{ h.hora | date:'HH:mm' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="card info-card">
+      <h3>ℹ️ Sobre esta integración</h3>
+      <ul>
+        <li><strong>Fuente:</strong> Open-Meteo — modelo meteorológico global (no es estación SENAMHI física).</li>
+        <li><strong>Ubicación:</strong> Huancayo ({{ c.ubicacion.latitud }}, {{ c.ubicacion.longitud }}) — {{ c.ubicacion.elevacion_m }} m s.n.m.</li>
+        <li><strong>Sincronización:</strong> Crea un registro agrícola, actualiza sensores compatibles y genera alertas según umbrales del cultivo.</li>
+        <li>Ver <a routerLink="/registros">registros</a>, <a routerLink="/sensores">sensores</a> y <a routerLink="/alertas">alertas</a> después de sincronizar.</li>
+      </ul>
+    </div>
+  }
+</div>

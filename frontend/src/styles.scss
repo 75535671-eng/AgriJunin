@@ -1,0 +1,235 @@
+/* ============================================================
+   Agricultura Inteligente Junín - Tema Global + Responsive
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
+
+:root {
+  --primary: #2d6a4f;
+  --primary-dark: #1b4332;
+  --primary-light: #40916c;
+  --accent: #95d5b2;
+  --accent-soft: #d8f3dc;
+  --bg: #f4f7f5;
+  --surface: #ffffff;
+  --text: #1a2e1f;
+  --text-muted: #5c6f62;
+  --border: #d4e4d9;
+  --danger: #d62828;
+  --warning: #f4a261;
+  --info: #457b9d;
+  --shadow: 0 4px 24px rgba(27, 67, 50, 0.08);
+  --radius: 12px;
+  --sidebar-width: 260px;
+  --header-height: 64px;
+  --bp-sm: 576px;
+  --bp-md: 768px;
+  --bp-lg: 992px;
+  --bp-xl: 1200px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img, svg { max-width: 100%; height: auto; }
+
+a { color: var(--primary); text-decoration: none; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  max-width: 100%;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &--primary {
+    background: var(--primary);
+    color: white;
+    &:hover { background: var(--primary-dark); }
+  }
+  &--outline {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    &:hover { border-color: var(--primary); color: var(--primary); }
+  }
+  &--danger {
+    background: var(--danger);
+    color: white;
+    &:hover { opacity: 0.9; }
+  }
+  &--sm { padding: 0.45rem 0.75rem; font-size: 0.8rem; }
+  &--block { width: 100%; }
+}
+
+@media (max-width: 768px) {
+  .btn {
+    min-height: 44px;
+    padding: 0.65rem 1rem;
+  }
+}
+
+.form-group {
+  margin-bottom: 1rem;
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    transition: border-color 0.2s;
+    min-height: 44px;
+    &:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.15);
+    }
+    &.invalid { border-color: var(--danger); }
+  }
+  textarea { min-height: 88px; resize: vertical; }
+  .error-msg {
+    font-size: 0.78rem;
+    color: var(--danger);
+    margin-top: 0.25rem;
+  }
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  &--success { background: var(--accent-soft); color: var(--primary-dark); }
+  &--warning { background: #fff3e0; color: #e65100; }
+  &--danger { background: #ffebee; color: var(--danger); }
+  &--info { background: #e3f2fd; color: var(--info); }
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+/* Tablas responsive con scroll horizontal */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    th, td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    th {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--accent-soft);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tr:hover td { background: rgba(216, 243, 220, 0.3); }
+  }
+}
+
+@media (max-width: 768px) {
+  .table-wrap::after {
+    content: '← Desliza para ver más →';
+    display: block;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 0.5rem 0 0;
+  }
+}
+
+/* Utilidades responsive */
+.hide-mobile { display: block; }
+.show-mobile { display: none; }
+
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 1rem;
+}
+
+.form-grid .full { grid-column: 1 / -1; }
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 576px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-actions {
+    flex-direction: column;
+    .btn { width: 100%; }
+  }
+}

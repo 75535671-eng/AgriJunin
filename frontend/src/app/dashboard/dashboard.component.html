@@ -1,0 +1,84 @@
+<div class="dashboard">
+  <header class="dashboard__intro">
+    <h2>Panel de Control</h2>
+    <p>Monitoreo en tiempo real — Región Junín</p>
+  </header>
+
+  @if (loading()) {
+    <p class="loading">Cargando estadísticas...</p>
+  } @else if (stats(); as s) {
+    @if (s.climaHuancayo) {
+      <div class="dashboard__clima">
+        <app-clima-widget [clima]="s.climaHuancayo" />
+        <a routerLink="/clima" class="btn btn--outline btn--sm clima-link">Ver pronóstico completo →</a>
+      </div>
+    }
+
+    <div class="dashboard__kpis">
+      <app-stat-card label="Agricultores activos" [value]="s.kpis.totalAgricultores" icon="👨‍🌾" color="#2d6a4f" />
+      <app-stat-card label="Cultivos registrados" [value]="s.kpis.totalCultivos" icon="🌱" color="#40916c" />
+      <app-stat-card label="Sensores activos" [value]="s.kpis.sensoresActivos" icon="📡" color="#457b9d" />
+      <app-stat-card label="Alertas críticas" [value]="s.kpis.alertasCriticas" icon="🔔" color="#d62828" subtitle="Sin resolver" />
+      <app-stat-card label="Lotes agrícolas" [value]="s.kpis.totalLotes" icon="🗺️" color="#1b4332" />
+      <app-stat-card label="Producción semanal" [value]="s.kpis.produccionSemanalKg + ' kg'" icon="📈" color="#f4a261" />
+    </div>
+
+    <div class="dashboard__grid">
+      <div class="card chart-card">
+        <h3>Producción semanal (kg)</h3>
+        <div class="bar-chart">
+          @for (item of s.produccionSemanal; track item.fecha) {
+            <div class="bar-chart__item">
+              <div class="bar-chart__bar-wrap">
+                <div class="bar-chart__bar" [style.height]="barHeight(item.produccion)"></div>
+              </div>
+              <span class="bar-chart__label">{{ item.fecha | date:'dd/MM' }}</span>
+            </div>
+          }
+          @if (!s.produccionSemanal.length) {
+            <p class="empty">Sin datos de producción esta semana</p>
+          }
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <h3>Cultivos por tipo</h3>
+        <ul class="list-stats">
+          @for (c of s.cultivosPorTipo; track c.tipo) {
+            <li>
+              <span>{{ c.tipo }}</span>
+              <strong>{{ c.cantidad }}</strong>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="card chart-card">
+        <h3>Estado de sensores</h3>
+        <ul class="list-stats">
+          @for (sen of s.sensoresPorEstado; track sen.estado) {
+            <li>
+              <span>{{ sen.estado }}</span>
+              <strong>{{ sen.cantidad }}</strong>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="card alerts-card">
+        <h3>Últimas alertas</h3>
+        @for (alerta of s.ultimasAlertas; track alerta.id) {
+          <div class="alert-item">
+            <span class="badge" [class]="nivelClass(alerta.nivel)">{{ alerta.nivel }}</span>
+            <div>
+              <strong>{{ alerta.titulo }}</strong>
+              <small>{{ alerta.lote_nombre }} — {{ alerta.fecha_alerta | date:'short' }}</small>
+            </div>
+          </div>
+        } @empty {
+          <p class="empty">No hay alertas recientes</p>
+        }
+      </div>
+    </div>
+  }
+</div>
