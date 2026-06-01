@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { StatCardComponent } from '../shared/components/stat-card/stat-card.component';
 import { ClimaWidgetComponent } from '../shared/components/clima-widget/clima-widget.component';
 import { DashboardService } from '../services/dashboard.service';
+import { AuthStateService } from '../core/services/auth-state.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -13,6 +14,7 @@ import { RouterLink } from '@angular/router';
 })
 export class DashboardComponent implements OnInit {
   private readonly dash = inject(DashboardService);
+  protected readonly auth = inject(AuthStateService);
 
   readonly stats = this.dash.stats;
   readonly loading = this.dash.loading;
@@ -21,6 +23,8 @@ export class DashboardComponent implements OnInit {
     const data = this.stats()?.produccionSemanal ?? [];
     return Math.max(...data.map((d) => Number(d.produccion)), 1);
   });
+
+  readonly showKpiAgricultores = computed(() => this.auth.isAdmin() || this.auth.isTecnico());
 
   ngOnInit(): void {
     this.dash.load();

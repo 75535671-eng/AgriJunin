@@ -2,11 +2,12 @@
   "name": "agri-junin-backend",
   "version": "1.0.0",
   "description": "API REST - Sistema de Agricultura Inteligente Región Junín",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "seed": "node database/seed-runner.js"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node database/seed-runner.js",
+    "fix-passwords": "node database/fix-passwords.js"
   },
   "keywords": ["agricultura", "iot", "junin", "api"],
   "author": "Proyecto Final Ing. Web",

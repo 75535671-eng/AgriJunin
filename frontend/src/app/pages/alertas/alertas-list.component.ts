@@ -4,10 +4,11 @@ import { DatePipe } from '@angular/common';
 import { AlertasStore } from '../../services/entity.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { AuthStateService } from '../../core/services/auth-state.service';
+import { RelationBannerComponent } from '../../shared/components/relation-banner/relation-banner.component';
 
 @Component({
   selector: 'app-alertas-list',
-  imports: [PageHeaderComponent, DatePipe, RouterLink],
+  imports: [PageHeaderComponent, DatePipe, RouterLink, RelationBannerComponent],
   providers: [AlertasStore],
   templateUrl: './alertas-list.component.html',
   styleUrl: './alertas-list.component.scss',

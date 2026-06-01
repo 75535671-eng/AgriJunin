@@ -22,3 +22,12 @@ export const roleGuard = (...roles: string[]): CanActivateFn => () => {
   if (auth.hasRole(...roles)) return true;
   return router.createUrlTree(['/dashboard']);
 };
+
+/** Bloquea rutas a roles no listados (p. ej. agricultores en /agricultores). */
+export const denyRolesGuard = (...denied: string[]): CanActivateFn => () => {
+  const auth = inject(AuthStateService);
+  const router = inject(Router);
+  const rol = auth.userRole();
+  if (!rol || !denied.includes(rol)) return true;
+  return router.createUrlTree(['/dashboard']);
+};

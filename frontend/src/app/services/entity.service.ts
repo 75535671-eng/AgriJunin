@@ -22,6 +22,7 @@ export class EntityStore<T> {
   private readonly _error = signal<string | null>(null);
   private readonly _pagination = signal<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   private readonly _search = signal('');
+  private readonly _filters = signal<QueryParams>({});
 
   readonly items = this._items.asReadonly();
   readonly loading = this._loading.asReadonly();
@@ -38,6 +39,18 @@ export class EntityStore<T> {
     this._search.set(term);
   }
 
+  setFilters(filters: QueryParams): void {
+    this._filters.set(filters);
+  }
+
+  clearFilters(): void {
+    this._filters.set({});
+  }
+
+  filters(): QueryParams {
+    return this._filters();
+  }
+
   load(extra: QueryParams = {}): void {
     this._loading.set(true);
     this._error.set(null);
@@ -46,6 +59,7 @@ export class EntityStore<T> {
         page: this._pagination().page,
         limit: this._pagination().limit,
         search: this._search() || undefined,
+        ...this._filters(),
         ...extra,
       })
       .subscribe({
@@ -88,6 +102,34 @@ export class EntityStore<T> {
 }
 
 @Injectable()
+export class LotesStore extends EntityStore<Lote> {
+  constructor() {
+    super('lotes');
+  }
+
+  filterByAgricultor(agricultorId: number | null): void {
+    const f = { ...this.filters() };
+    if (agricultorId) f['agricultor_id'] = agricultorId;
+    else delete f['agricultor_id'];
+    this.setFilters(f);
+    this.setPage(1);
+  }
+
+  filterByCultivo(cultivoId: number | null): void {
+    const f = { ...this.filters() };
+    if (cultivoId) f['cultivo_id'] = cultivoId;
+    else delete f['cultivo_id'];
+    this.setFilters(f);
+    this.setPage(1);
+  }
+
+  clearAllFilters(): void {
+    this.clearFilters();
+    this.setPage(1);
+  }
+}
+
+@Injectable()
 export class AgricultoresStore extends EntityStore<Agricultor> {
   constructor() { super('agricultores'); }
 }
@@ -95,11 +137,6 @@ export class AgricultoresStore extends EntityStore<Agricultor> {
 @Injectable()
 export class CultivosStore extends EntityStore<Cultivo> {
   constructor() { super('cultivos'); }
-}
-
-@Injectable()
-export class LotesStore extends EntityStore<Lote> {
-  constructor() { super('lotes'); }
 }
 
 @Injectable()

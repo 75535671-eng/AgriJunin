@@ -4,13 +4,13 @@ const { success, error, paginated } = require('./response');
 const createCrudController = (service, entityName) => ({
   getAll: async (req, res, next) => {
     try {
-      const result = await service.findAll(req.query);
+      const result = await service.findAll({ ...req.query, scope: req.scope });
       return paginated(res, result.data, result.pagination, `${entityName} obtenidos`);
     } catch (e) { next(e); }
   },
   getById: async (req, res, next) => {
     try {
-      const item = await service.findById(req.params.id);
+      const item = await service.findById(req.params.id, req.scope);
       if (!item) return error(res, `${entityName} no encontrado`, 404);
       return success(res, item);
     } catch (e) { next(e); }

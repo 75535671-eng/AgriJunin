@@ -24,13 +24,46 @@ export interface Usuario {
   id: number;
   nombre: string;
   email: string;
+  dni?: string;
   rol: Rol;
   activo?: boolean;
+  estado_cuenta?: EstadoCuenta;
+  agricultor_id?: number;
+  agricultor_nombre?: string;
 }
+
+export type EstadoAprobacionCultivo = 'aprobado' | 'pendiente' | 'rechazado';
+export type EstadoAprobacionLote = EstadoAprobacionCultivo;
 
 export interface AuthData {
   user: Usuario;
-  token: string;
+  token: string | null;
+  pendienteAprobacion?: boolean;
+}
+
+export type EstadoCuenta = 'aprobada' | 'pendiente' | 'rechazada';
+
+export interface UsuarioPendiente {
+  id: number;
+  nombre: string;
+  email: string;
+  dni?: string;
+  rol: Rol;
+  estado_cuenta: EstadoCuenta;
+  created_at?: string;
+}
+
+/** Cultivo en un lote del agricultor, con estado propio de la parcela */
+export interface AgricultorLoteCultivo {
+  lote_id: number;
+  codigo_lote: string;
+  lote_nombre: string;
+  cultivo_id?: number;
+  cultivo_nombre: string;
+  cultivo_tipo?: string;
+  estado: string;
+  area_hectareas: number;
+  fecha_siembra?: string;
 }
 
 export interface Agricultor {
@@ -51,6 +84,10 @@ export interface Agricultor {
   notas?: string;
   usuario_email?: string;
   usuario_nombre?: string;
+  total_lotes?: number;
+  total_cultivos_distintos?: number;
+  cultivos_en_lotes?: string;
+  lotes_cultivos?: AgricultorLoteCultivo[];
 }
 
 export interface Cultivo {
@@ -67,6 +104,17 @@ export interface Cultivo {
   temp_optima_max?: number;
   descripcion?: string;
   activo?: boolean;
+  total_lotes?: number;
+  total_agricultores?: number;
+  agricultores_en_lotes?: string;
+  estado_aprobacion?: EstadoAprobacionCultivo;
+  solicitado_por?: number;
+  solicitante_nombre?: string;
+  revisor_nombre?: string;
+  motivo_rechazo?: string;
+  lote_solicitud_id?: number;
+  lote_solicitud_codigo?: string;
+  lote_solicitud_nombre?: string;
 }
 
 export interface Lote {
@@ -87,6 +135,11 @@ export interface Lote {
   agricultor_nombres?: string;
   agricultor_apellidos?: string;
   cultivo_nombre?: string;
+  estado_aprobacion?: EstadoAprobacionLote;
+  solicitado_por?: number;
+  solicitante_nombre?: string;
+  revisor_nombre?: string;
+  motivo_rechazo?: string;
 }
 
 export interface Sensor {
@@ -104,6 +157,11 @@ export interface Sensor {
   bateria_pct?: number;
   activo?: boolean;
   lote_nombre?: string;
+  codigo_lote?: string;
+  agricultor_id?: number;
+  cultivo_id?: number;
+  cultivo_nombre?: string;
+  agricultor_nombre?: string;
 }
 
 export interface RegistroAgricola {
@@ -120,12 +178,17 @@ export interface RegistroAgricola {
   observaciones?: string;
   registrado_por?: number;
   lote_nombre?: string;
+  codigo_lote?: string;
+  agricultor_id?: number;
+  agricultor_nombre?: string;
   cultivo_nombre?: string;
 }
 
 export interface Alerta {
   id?: number;
-  registro_id: number;
+  lote_id?: number | null;
+  registro_id?: number | null;
+  sensor_id?: number | null;
   tipo: string;
   nivel: string;
   titulo: string;
@@ -134,6 +197,11 @@ export interface Alerta {
   resuelta?: boolean;
   fecha_alerta?: string;
   lote_nombre?: string;
+  codigo_lote?: string;
+  codigo_sensor?: string;
+  sensor_nombre?: string;
+  agricultor_nombre?: string;
+  cultivo_nombre?: string;
 }
 
 export interface ClimaHuancayo {
@@ -175,21 +243,79 @@ export interface ClimaHuancayo {
   licencia: string;
 }
 
+export interface MapsConfig {
+  apiKey: string;
+  centro: { lat: number; lng: number; etiqueta: string };
+  origenRuta: string;
+}
+
+export interface MapsDirections {
+  origen_referencia: string;
+  origen: { lat: number; lng: number; direccion: string };
+  destino: { lat: number; lng: number; direccion: string };
+  distancia?: string;
+  distancia_metros?: number;
+  duracion?: string;
+  duracion_segundos?: number;
+  polyline?: string;
+}
+
+export interface EspeciePlanta {
+  perenual_id: number;
+  nombre: string;
+  nombre_cientifico: string;
+  tipo_sugerido: string;
+  temporada_sugerida: string;
+  familia: string | null;
+  ciclo: string | null;
+  imagen_url: string | null;
+  descripcion_sugerida: string | null;
+}
+
+export interface BusquedaPlantas {
+  query: string;
+  total: number;
+  resultados: EspeciePlanta[];
+  fuente: string;
+}
+
+export interface MapsGeocode {
+  direccion: string;
+  place_id: string | null;
+}
+
+export interface SincronizacionLoteDetalle {
+  lote_id: number;
+  lote_nombre: string;
+  registro_id: number;
+  sensores_actualizados: number;
+  sensores: { sensor_id: number; codigo: string; lectura: number }[];
+  alertas_generadas: number;
+  alertas: { id: number; tipo: string; nivel: string }[];
+}
+
 export interface SincronizacionClima {
   clima: ClimaHuancayo;
-  sincronizacion: {
-    lote_id: number;
-    lote_nombre: string;
-    registro_id: number;
-    sensores_actualizados: number;
-    sensores: { sensor_id: number; codigo: string; lectura: number }[];
-    alertas_generadas: number;
-    alertas: { id: number; tipo: string; nivel: string }[];
+  sincronizacion: SincronizacionLoteDetalle & {
+    todos_lotes?: boolean;
+    lotes_procesados?: number;
+    total_sensores_actualizados?: number;
+    total_alertas_generadas?: number;
+    lotes?: SincronizacionLoteDetalle[];
   };
+}
+
+export interface DashboardContexto {
+  rol: Rol;
+  titulo: string;
+  descripcion: string;
+  agricultorVinculado: boolean;
+  flujo: { paso: number; modulo: string; descripcion: string }[];
 }
 
 export interface DashboardStats {
   climaHuancayo?: ClimaHuancayo | null;
+  contexto?: DashboardContexto;
   kpis: {
     totalAgricultores: number;
     totalCultivos: number;

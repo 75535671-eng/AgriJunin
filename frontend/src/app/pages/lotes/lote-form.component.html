@@ -1,0 +1,81 @@
+<app-relation-banner
+  hint="Al guardar, este lote quedará vinculado al agricultor y al cultivo que elija. Marque la ubicación en el mapa."
+/>
+<h2>{{ isEdit() ? 'Editar' : 'Nuevo' }} lote</h2>
+<p class="form-hint">
+  El <strong>lote</strong> es el vínculo entre un agricultor y un cultivo en una parcela concreta.
+  @if (auth.isAgricultor() && !isEdit()) {
+    Al guardar, su solicitud será enviada a un <strong>técnico o administrador</strong> para aprobación.
+    Marque en el mapa dónde está su parcela.
+  } @else if (auth.isAgricultor()) {
+    Marque en el mapa dónde está su parcela.
+  }
+</p>
+
+@if (auth.isAgricultor() && !agricultorId()) {
+  <div class="alert-warn card">Su cuenta no está vinculada a un agricultor. Contacte al administrador.</div>
+}
+
+<form [formGroup]="form" (ngSubmit)="save()" class="card form-card">
+  <div class="form-grid">
+    @if (!auth.isAgricultor()) {
+      <div class="form-group">
+        <label>Agricultor (dueño del lote) *</label>
+        <select formControlName="agricultor_id">
+          @for (a of lookup.agricultores(); track a.id) {
+            <option [value]="a.id">{{ a.nombres }} {{ a.apellidos }} — {{ a.distrito }}</option>
+          }
+        </select>
+      </div>
+    }
+    <div class="form-group">
+      <label>Cultivo en este lote *</label>
+      <select formControlName="cultivo_id">
+        <option value="">— Seleccione cultivo —</option>
+        @for (c of lookup.cultivos(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }} ({{ c.tipo }})</option>
+        }
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Código lote *</label>
+      <input formControlName="codigo_lote" placeholder="LOT-CHU-001" />
+    </div>
+    <div class="form-group">
+      <label>Nombre parcela *</label>
+      <input formControlName="nombre" />
+    </div>
+    <div class="form-group">
+      <label>Área (ha) *</label>
+      <input type="number" step="0.01" formControlName="area_hectareas" />
+    </div>
+    <div class="form-group">
+      <label>Estado</label>
+      <select formControlName="estado">
+        <option value="preparacion">Preparación</option>
+        <option value="siembra">Siembra</option>
+        <option value="crecimiento">Crecimiento</option>
+        <option value="cosecha">Cosecha</option>
+        <option value="barbecho">Barbecho</option>
+      </select>
+    </div>
+    <div class="form-group form-group--full">
+      <label>Dirección / referencia</label>
+      <input formControlName="ubicacion" placeholder="Se completa al elegir en el mapa" />
+    </div>
+  </div>
+
+  <app-lote-map-picker
+    [latitudInicial]="form.controls.latitud.value"
+    [longitudInicial]="form.controls.longitud.value"
+    [ubicacionInicial]="form.controls.ubicacion.value"
+    (ubicacionChange)="onUbicacion($event)"
+  />
+
+  <div class="form-actions">
+    <a routerLink="/lotes" class="btn btn--outline">Cancelar</a>
+    <button class="btn btn--primary" type="submit" [disabled]="form.invalid || (auth.isAgricultor() && !agricultorId())">
+      {{ auth.isAgricultor() && !isEdit() ? 'Enviar solicitud de lote' : 'Guardar lote' }}
+    </button>
+  </div>
+</form>

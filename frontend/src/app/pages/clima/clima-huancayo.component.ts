@@ -21,6 +21,8 @@ export class ClimaHuancayoComponent implements OnInit {
   protected readonly loteSeleccionado = signal<number | undefined>(undefined);
   protected readonly syncMessage = signal<string | null>(null);
 
+  protected readonly isStaff = computed(() => this.auth.isAdmin() || this.auth.isTecnico());
+
   readonly maxTempHoraria = computed(() => {
     const h = this.weather.clima()?.pronosticoHorario ?? [];
     return Math.max(...h.map((x) => x.temperatura), 1);
@@ -38,21 +40,32 @@ export class ClimaHuancayoComponent implements OnInit {
 
   sincronizar(): void {
     this.syncMessage.set(null);
-    this.weather.sincronizar(this.loteSeleccionado());
-    const check = setInterval(() => {
-      if (!this.weather.syncing()) {
-        clearInterval(check);
+    const sync$ =
+      this.isStaff() && !this.loteSeleccionado()
+        ? this.weather.sincronizarTodos()
+        : this.weather.sincronizar(this.loteSeleccionado());
+
+    sync$.subscribe({
+      next: () => {
         const last = this.weather.lastSync();
-        if (last) {
+        if (!last) return;
+        const s = last.sincronizacion;
+        if (s.todos_lotes && s.lotes_procesados != null) {
           this.syncMessage.set(
-            `✓ Sincronizado en "${last.sincronizacion.lote_nombre}": ` +
-            `${last.sincronizacion.sensores_actualizados} sensores, ` +
-            `${last.sincronizacion.alertas_generadas} alertas. ` +
-            `Registro #${last.sincronizacion.registro_id}.`
+            `✓ Sincronizados ${s.lotes_procesados} lotes: ` +
+              `${s.total_sensores_actualizados ?? 0} sensores, ` +
+              `${s.total_alertas_generadas ?? 0} alertas.`
+          );
+        } else if (s.lote_nombre) {
+          this.syncMessage.set(
+            `✓ Sincronizado en "${s.lote_nombre}": ` +
+              `${s.sensores_actualizados} sensores, ` +
+              `${s.alertas_generadas} alertas. ` +
+              `Registro #${s.registro_id}.`
           );
         }
-      }
-    }, 200);
+      },
+    });
   }
 
   barTemp(temp: number): string {

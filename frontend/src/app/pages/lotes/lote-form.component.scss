@@ -1,0 +1,33 @@
+.form-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.form-card {
+  padding: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.alert-warn {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff8e1;
+  color: #6d4c00;
+  font-size: 0.9rem;
+}

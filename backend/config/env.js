@@ -1,0 +1,10 @@
+/**
+ * Carga .env siempre desde la carpeta backend (no depende del directorio de ejecución).
+ */
+const path = require('path');
+const dotenv = require('dotenv');
+
+const envPath = path.join(__dirname, '..', '.env');
+dotenv.config({ path: envPath });
+
+module.exports = { envPath };

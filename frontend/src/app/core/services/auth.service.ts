@@ -2,22 +2,45 @@ import { Injectable, inject } from '@angular/core';
 import { tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthStateService } from './auth-state.service';
-import { ApiResponse, AuthData, Usuario } from '../../models';
+import { ClimaSyncPromptService } from './clima-sync-prompt.service';
+import { AuthData, Usuario } from '../../models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly state = inject(AuthStateService);
+  private readonly climaPrompt = inject(ClimaSyncPromptService);
 
-  login(email: string, password: string) {
-    return this.api.post<AuthData>('auth/login', { email, password }).pipe(
-      tap((res) => this.state.setSession(res.data))
+  login(login: string, password: string) {
+    const body = /^\d{8}$/.test(login.trim())
+      ? { dni: login.trim(), password }
+      : { email: login.trim(), password };
+    return this.api.post<AuthData>('auth/login', body).pipe(
+      tap((res) => {
+        if (res.data.token) {
+          this.state.setSession({ user: res.data.user, token: res.data.token });
+          this.climaPrompt.markShowAfterLogin();
+        }
+      })
     );
   }
 
-  register(data: { nombre: string; email: string; password: string; rol?: string }) {
+  register(data: {
+    dni: string;
+    nombres: string;
+    apellidos: string;
+    nombre: string;
+    email: string;
+    password: string;
+    rol?: string;
+  }) {
     return this.api.post<AuthData>('auth/register', data).pipe(
-      tap((res) => this.state.setSession(res.data))
+      tap((res) => {
+        if (res.data.token && !res.data.pendienteAprobacion) {
+          this.state.setSession(res.data as { user: typeof res.data.user; token: string });
+          this.climaPrompt.markShowAfterLogin();
+        }
+      })
     );
   }
 

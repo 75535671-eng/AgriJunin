@@ -5,10 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { AgricultoresStore } from '../../services/entity.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { AuthStateService } from '../../core/services/auth-state.service';
+import { RelationBannerComponent } from '../../shared/components/relation-banner/relation-banner.component';
 
 @Component({
   selector: 'app-agricultores-list',
-  imports: [PageHeaderComponent, RouterLink, DatePipe, FormsModule],
+  imports: [PageHeaderComponent, RouterLink, DatePipe, FormsModule, RelationBannerComponent],
   providers: [AgricultoresStore],
   templateUrl: './agricultores-list.component.html',
   styleUrl: './crud-list.scss',
@@ -36,5 +37,27 @@ export class AgricultoresListComponent implements OnInit {
 
   goNew(): void {
     this.router.navigate(['/agricultores/nuevo']);
+  }
+
+  estadoLabel(estado: string): string {
+    const labels: Record<string, string> = {
+      preparacion: 'Preparación',
+      siembra: 'Siembra',
+      crecimiento: 'Crecimiento',
+      cosecha: 'Cosecha',
+      barbecho: 'Barbecho',
+    };
+    return labels[estado] || estado;
+  }
+
+  estadoClass(estado: string): string {
+    const map: Record<string, string> = {
+      preparacion: 'badge--info',
+      siembra: 'badge--warning',
+      crecimiento: 'badge--success',
+      cosecha: 'badge--success',
+      barbecho: 'badge--info',
+    };
+    return map[estado] || 'badge--info';
   }
 }

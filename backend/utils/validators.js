@@ -8,12 +8,22 @@ const paginationQuery = [
 ];
 
 const loginRules = [
-  body('email').isEmail().normalizeEmail().withMessage('Email inválido'),
   body('password').isLength({ min: 6 }).withMessage('Contraseña mínimo 6 caracteres'),
+  body().custom((_, { req }) => {
+    const id = req.body.dni || req.body.email || req.body.login;
+    if (!id || !String(id).trim()) throw new Error('Ingrese DNI o correo electrónico');
+    const v = String(id).trim();
+    if (/^\d{8}$/.test(v)) return true;
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return true;
+    throw new Error('Use un DNI de 8 dígitos o un correo válido');
+  }),
 ];
 
 const registerRules = [
-  body('nombre').trim().isLength({ min: 2, max: 120 }),
+  body('dni').matches(/^\d{8}$/).withMessage('DNI debe tener 8 dígitos'),
+  body('nombres').trim().isLength({ min: 2, max: 100 }),
+  body('apellidos').trim().isLength({ min: 2, max: 100 }),
+  body('nombre').optional().trim().isLength({ min: 2, max: 120 }),
   body('email').isEmail().normalizeEmail(),
   body('password')
     .isLength({ min: 8 })
@@ -36,12 +46,17 @@ const cultivoRules = [
   body('tipo').isIn(['cereal', 'tuberculo', 'hortaliza', 'fruta', 'legumbre', 'forraje', 'otro']),
   body('temporada').optional().isIn(['verano', 'invierno', 'todo_año']),
   body('dias_crecimiento').optional().isInt({ min: 1, max: 365 }),
+  body('lote_solicitud_id').optional().isInt({ min: 1 }),
 ];
 
 const loteRules = [
-  body('agricultor_id').isInt({ min: 1 }),
+  body('agricultor_id').optional().isInt({ min: 1 }).withMessage('Agricultor inválido'),
+  body('cultivo_id').isInt({ min: 1 }).withMessage('Debe seleccionar el cultivo del lote'),
   body('codigo_lote').trim().isLength({ min: 3, max: 30 }),
   body('nombre').trim().isLength({ min: 2, max: 120 }),
+  body('ubicacion').optional().trim().isLength({ max: 255 }),
+  body('latitud').optional().isFloat({ min: -90, max: 90 }),
+  body('longitud').optional().isFloat({ min: -180, max: 180 }),
   body('area_hectareas').isFloat({ min: 0.01 }),
   body('tipo_suelo').optional().isIn(['arcilloso', 'arenoso', 'franco', 'limoso', 'otro']),
   body('estado').optional().isIn(['preparacion', 'siembra', 'crecimiento', 'cosecha', 'barbecho']),
@@ -65,11 +80,19 @@ const registroRules = [
 ];
 
 const alertaRules = [
-  body('registro_id').isInt({ min: 1 }),
+  body('lote_id').optional({ values: 'null' }).isInt({ min: 1 }),
+  body('registro_id').optional({ values: 'null' }).isInt({ min: 1 }),
+  body('sensor_id').optional({ values: 'null' }).isInt({ min: 1 }),
   body('tipo').isIn(['humedad', 'temperatura', 'ph', 'pluvia', 'sensor', 'produccion', 'sistema']),
   body('nivel').isIn(['info', 'advertencia', 'critica']),
   body('titulo').trim().isLength({ min: 3, max: 200 }),
   body('mensaje').trim().isLength({ min: 5 }),
+  body().custom((_, { req }) => {
+    const { registro_id, sensor_id, lote_id, tipo } = req.body;
+    if (tipo === 'sistema') return true;
+    if (registro_id || sensor_id || lote_id) return true;
+    throw new Error('Indique registro, sensor o lote (o tipo sistema).');
+  }),
 ];
 
 module.exports = {

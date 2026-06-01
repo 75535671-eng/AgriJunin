@@ -1,0 +1,119 @@
+<h2>{{ titulo() }}</h2>
+@if (auth.isAgricultor() && !isEdit()) {
+  <p class="form-hint">
+    Su solicitud será revisada por un técnico o administrador. Indique en qué <strong>lote</strong> usará este cultivo.
+  </p>
+}
+
+<form [formGroup]="form" (ngSubmit)="save()" class="card form-card">
+  <div class="form-grid">
+    @if (auth.isAgricultor() || lotesDisponibles().length) {
+      <div class="form-group full-width">
+        <label>Lote donde se usará este cultivo {{ auth.isAgricultor() ? '*' : '(opcional)' }}</label>
+        <select formControlName="lote_solicitud_id">
+          <option value="">— Seleccione lote —</option>
+          @for (l of lotesDisponibles(); track l.id) {
+            <option [value]="l.id">{{ l.codigo_lote }} — {{ l.nombre }} ({{ l.ubicacion || 'sin ubicación' }})</option>
+          }
+        </select>
+        @if (auth.isAgricultor() && !lotesDisponibles().length) {
+          <small class="warn">Primero registre y apruebe un lote en «Lotes agrícolas».</small>
+        }
+      </div>
+    }
+
+    <div class="form-group full-width plant-search">
+      <label>Buscar producto / nombre científico (Trefle)</label>
+      <div class="plant-search__row">
+        <input
+          type="search"
+          [value]="busqueda()"
+          (input)="onBusquedaInput($event)"
+          placeholder="Ej: papa, maíz, haba, tomate..."
+          autocomplete="off"
+        />
+        <button
+          type="button"
+          class="btn btn--outline btn--sm"
+          (click)="buscarPlantas()"
+          [disabled]="buscandoPlantas() || busqueda().trim().length < 2"
+        >
+          {{ buscandoPlantas() ? 'Buscando...' : 'Buscar' }}
+        </button>
+      </div>
+      @if (errorPlantas()) {
+        <small class="warn">{{ errorPlantas() }}</small>
+      }
+      @if (resultadosPlantas().length) {
+        <ul class="plant-results">
+          @for (p of resultadosPlantas(); track p.perenual_id) {
+            <li>
+              <button type="button" class="plant-results__item" (click)="aplicarEspecie(p)">
+                @if (p.imagen_url) {
+                  <img [src]="p.imagen_url" alt="" width="40" height="40" />
+                }
+                <span>
+                  <strong>{{ p.nombre }}</strong>
+                  <em>{{ p.nombre_cientifico }}</em>
+                  @if (p.familia) {
+                    <small>{{ p.familia }} · {{ p.ciclo || 'ciclo N/D' }}</small>
+                  }
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      @if (especieSeleccionada()) {
+        <p class="success-msg">✓ Especie seleccionada: <em>{{ especieSeleccionada() }}</em></p>
+      }
+    </div>
+
+    <div class="form-group">
+      <label>Nombre del producto *</label>
+      <input formControlName="nombre" />
+    </div>
+    <div class="form-group">
+      <label>Nombre científico</label>
+      <input formControlName="nombre_cientifico" placeholder="Se completa al buscar" />
+    </div>
+    <div class="form-group">
+      <label>Tipo *</label>
+      <select formControlName="tipo">
+        <option value="cereal">Cereal</option>
+        <option value="tuberculo">Tubérculo</option>
+        <option value="hortaliza">Hortaliza</option>
+        <option value="fruta">Fruta</option>
+        <option value="legumbre">Legumbre</option>
+        <option value="forraje">Forraje</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Temporada</label>
+      <select formControlName="temporada">
+        <option value="verano">Verano</option>
+        <option value="invierno">Invierno</option>
+        <option value="todo_año">Todo el año</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Días crecimiento</label>
+      <input type="number" formControlName="dias_crecimiento" />
+    </div>
+    <div class="form-group">
+      <label>Rendimiento (qq/ha)</label>
+      <input type="number" formControlName="rendimiento_promedio" />
+    </div>
+    <div class="form-group full-width">
+      <label>Descripción</label>
+      <textarea formControlName="descripcion" rows="2"></textarea>
+    </div>
+  </div>
+  <div class="form-actions">
+    <a routerLink="/cultivos" class="btn btn--outline">Cancelar</a>
+    <button type="submit" class="btn btn--primary" [disabled]="form.invalid">
+      {{ auth.isAgricultor() && !isEdit() ? 'Enviar solicitud' : 'Guardar' }}
+    </button>
+  </div>
+</form>

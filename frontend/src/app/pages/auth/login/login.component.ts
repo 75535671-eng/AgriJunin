@@ -18,9 +18,17 @@ export class LoginComponent {
   protected readonly error = signal<string | null>(null);
 
   form = this.fb.nonNullable.group({
-    email: ['admin@agrijunin.pe', [Validators.required, Validators.email]],
-    password: ['Admin123!', [Validators.required, Validators.minLength(6)]],
+    login: ['', [Validators.required, this.loginValidator]],
+    password: ['', [Validators.required, Validators.minLength(6)]],
   });
+
+  loginValidator(control: { value: string }) {
+    const v = String(control.value || '').trim();
+    if (!v) return { required: true };
+    if (/^\d{8}$/.test(v)) return null;
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return null;
+    return { loginFormat: true };
+  }
 
   submit(): void {
     if (this.form.invalid) {
@@ -29,11 +37,17 @@ export class LoginComponent {
     }
     this.loading.set(true);
     this.error.set(null);
-    const { email, password } = this.form.getRawValue();
-    this.auth.login(email, password).subscribe({
+    const { login, password } = this.form.getRawValue();
+    this.auth.login(login.trim(), password).subscribe({
       next: () => this.router.navigate(['/dashboard']),
       error: (err) => {
-        this.error.set(err?.error?.message || 'Error al iniciar sesión');
+        if (err?.status === 0) {
+          this.error.set(
+            'No se pudo conectar con el servidor. Inicie el backend (puerto 3000).'
+          );
+        } else {
+          this.error.set(err?.error?.message || 'Credenciales inválidas');
+        }
         this.loading.set(false);
       },
       complete: () => this.loading.set(false),

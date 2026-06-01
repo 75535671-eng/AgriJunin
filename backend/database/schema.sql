@@ -16,22 +16,25 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre        VARCHAR(120) NOT NULL,
   email         VARCHAR(180) NOT NULL UNIQUE,
+  dni           VARCHAR(8) NULL UNIQUE,
   password      VARCHAR(255) NOT NULL,
   rol           ENUM('administrador', 'agricultor', 'tecnico') NOT NULL DEFAULT 'agricultor',
   activo        TINYINT(1) NOT NULL DEFAULT 1,
+  estado_cuenta ENUM('aprobada','pendiente','rechazada') NOT NULL DEFAULT 'aprobada',
   avatar_url    VARCHAR(255) NULL,
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_usuarios_rol (rol),
-  INDEX idx_usuarios_activo (activo)
+  INDEX idx_usuarios_activo (activo),
+  INDEX idx_usuarios_dni (dni)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
--- 2. AGRICULTORES (1:N desde usuarios)
+-- 2. AGRICULTORES (1:1 con usuarios: un usuario = una sola ficha)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS agricultores (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id      INT UNSIGNED NOT NULL,
+  usuario_id      INT UNSIGNED NULL UNIQUE,
   dni             VARCHAR(15) NOT NULL UNIQUE,
   nombres         VARCHAR(100) NOT NULL,
   apellidos       VARCHAR(100) NOT NULL,
@@ -71,14 +74,25 @@ CREATE TABLE IF NOT EXISTS cultivos (
   temp_optima_max   DECIMAL(5,2) NULL,
   descripcion       TEXT NULL,
   activo            TINYINT(1) NOT NULL DEFAULT 1,
+  estado_aprobacion ENUM('aprobado','pendiente','rechazado') NOT NULL DEFAULT 'aprobado',
+  solicitado_por    INT UNSIGNED NULL,
+  revisado_por      INT UNSIGNED NULL,
+  fecha_revision    TIMESTAMP NULL,
+  motivo_rechazo    VARCHAR(255) NULL,
+  lote_solicitud_id INT UNSIGNED NULL COMMENT 'Lote donde el agricultor usará este cultivo (solicitud)',
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_cultivos_tipo (tipo),
-  INDEX idx_cultivos_nombre (nombre)
+  INDEX idx_cultivos_nombre (nombre),
+  INDEX idx_cultivos_aprobacion (estado_aprobacion),
+  CONSTRAINT fk_cultivos_solicitante FOREIGN KEY (solicitado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  CONSTRAINT fk_cultivos_revisor FOREIGN KEY (revisado_por) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
--- 4. LOTES (1:N desde agricultores)
+-- 4. LOTES — TABLA CENTRAL DE RELACIÓN
+--    Agricultor (dueño) + Cultivo (qué siembra) = Lote (parcela)
+--    Sensores → lote_id | Registros → lote_id + cultivo_id | Alertas → registro → lote
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lotes (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -94,17 +108,25 @@ CREATE TABLE IF NOT EXISTS lotes (
   estado          ENUM('preparacion', 'siembra', 'crecimiento', 'cosecha', 'barbecho') NOT NULL DEFAULT 'preparacion',
   fecha_siembra   DATE NULL,
   fecha_cosecha_est DATE NULL,
-  activo          TINYINT(1) NOT NULL DEFAULT 1,
-  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  activo            TINYINT(1) NOT NULL DEFAULT 1,
+  estado_aprobacion ENUM('aprobado','pendiente','rechazado') NOT NULL DEFAULT 'aprobado',
+  solicitado_por    INT UNSIGNED NULL,
+  revisado_por      INT UNSIGNED NULL,
+  fecha_revision    TIMESTAMP NULL,
+  motivo_rechazo    VARCHAR(255) NULL,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_lotes_agricultor
     FOREIGN KEY (agricultor_id) REFERENCES agricultores(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_lotes_cultivo
     FOREIGN KEY (cultivo_id) REFERENCES cultivos(id)
     ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_lotes_solicitante FOREIGN KEY (solicitado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  CONSTRAINT fk_lotes_revisor FOREIGN KEY (revisado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
   INDEX idx_lotes_estado (estado),
-  INDEX idx_lotes_agricultor (agricultor_id)
+  INDEX idx_lotes_agricultor (agricultor_id),
+  INDEX idx_lotes_aprobacion (estado_aprobacion)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -165,11 +187,13 @@ CREATE TABLE IF NOT EXISTS registros_agricolas (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
--- 7. ALERTAS (1:N desde registros_agricolas)
+-- 7. ALERTAS (origen: registro agrícola, sensor o lote; tipo sistema opcional)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS alertas (
   id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  registro_id         INT UNSIGNED NOT NULL,
+  lote_id             INT UNSIGNED NULL COMMENT 'Contexto del campo (directo o derivado)',
+  registro_id         INT UNSIGNED NULL COMMENT 'Lecturas de clima / registro agrícola',
+  sensor_id           INT UNSIGNED NULL COMMENT 'Hardware IoT (batería, falla, etc.)',
   tipo                ENUM('humedad', 'temperatura', 'ph', 'pluvia', 'sensor', 'produccion', 'sistema') NOT NULL,
   nivel               ENUM('info', 'advertencia', 'critica') NOT NULL DEFAULT 'advertencia',
   titulo              VARCHAR(200) NOT NULL,
@@ -180,10 +204,30 @@ CREATE TABLE IF NOT EXISTS alertas (
   fecha_resolucion    DATETIME NULL,
   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_alertas_lote
+    FOREIGN KEY (lote_id) REFERENCES lotes(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_alertas_registro
     FOREIGN KEY (registro_id) REFERENCES registros_agricolas(id)
-    ON DELETE CASCADE ON UPDATE CASCADE,
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_alertas_sensor
+    FOREIGN KEY (sensor_id) REFERENCES sensores(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT chk_alertas_origen CHECK (
+    registro_id IS NOT NULL
+    OR sensor_id IS NOT NULL
+    OR lote_id IS NOT NULL
+    OR tipo = 'sistema'
+  ),
+  INDEX idx_alertas_lote (lote_id),
+  INDEX idx_alertas_registro (registro_id),
+  INDEX idx_alertas_sensor (sensor_id),
   INDEX idx_alertas_nivel (nivel),
   INDEX idx_alertas_leida (leida),
   INDEX idx_alertas_fecha (fecha_alerta)
 ) ENGINE=InnoDB;
+
+-- FK diferida: cultivos.lote_solicitud_id → lotes (tablas ya creadas)
+ALTER TABLE cultivos
+  ADD CONSTRAINT fk_cultivos_lote_solicitud
+  FOREIGN KEY (lote_solicitud_id) REFERENCES lotes(id) ON DELETE SET NULL;

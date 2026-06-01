@@ -1,6 +1,10 @@
+<app-relation-banner
+  hint="El agricultor es el dueño de los lotes. En «Lotes» verá qué cultivo tiene en cada parcela."
+/>
+
 <app-page-header
   title="Agricultores"
-  subtitle="Gestión de productores de la región Junín"
+  subtitle="Productores — cada uno puede tener varios lotes con distintos cultivos"
   actionLabel="Nuevo agricultor"
   [showAction]="auth.canEdit()"
   (actionClick)="goNew()"
@@ -27,6 +31,8 @@
           <th>Distrito</th>
           <th>Hectáreas</th>
           <th>Registro</th>
+          <th>Lotes</th>
+          <th>Cultivos en lotes (estado por parcela)</th>
           <th>Estado</th>
           <th>Acciones</th>
         </tr>
@@ -39,6 +45,39 @@
             <td>{{ item.distrito }}</td>
             <td>{{ item.hectareas_totales }} ha</td>
             <td>{{ item.fecha_registro | date:'dd/MM/yyyy' }}</td>
+            <td>
+              @if (item.total_lotes) {
+                <a [routerLink]="['/lotes']" [queryParams]="{ agricultor_id: item.id }" class="link-badge">
+                  {{ item.total_lotes }} lote(s)
+                </a>
+              } @else {
+                <span class="muted">Sin lotes</span>
+              }
+            </td>
+            <td class="lotes-cultivos-cell">
+              @if (item.lotes_cultivos?.length) {
+                <ul class="lotes-cultivos-list">
+                  @for (lc of item.lotes_cultivos; track lc.lote_id) {
+                    <li class="lotes-cultivos-list__item">
+                      <div class="lotes-cultivos-list__main">
+                        <span class="lotes-cultivos-list__cultivo">🌱 {{ lc.cultivo_nombre }}</span>
+                        <span class="badge" [class]="estadoClass(lc.estado)">{{ estadoLabel(lc.estado) }}</span>
+                      </div>
+                      <small class="lotes-cultivos-list__meta">
+                        @if (auth.canEdit()) {
+                          <a [routerLink]="['/lotes', lc.lote_id, 'editar']" class="lote-link">{{ lc.codigo_lote }}</a>
+                        } @else {
+                          <span>{{ lc.codigo_lote }}</span>
+                        }
+                        · {{ lc.lote_nombre }} · {{ lc.area_hectareas }} ha
+                      </small>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <span class="muted">Sin lotes registrados</span>
+              }
+            </td>
             <td>
               <span class="badge" [class.badge--success]="item.activo" [class.badge--danger]="!item.activo">
                 {{ item.activo ? 'Activo' : 'Inactivo' }}
@@ -54,7 +93,7 @@
             </td>
           </tr>
         } @empty {
-          <tr><td colspan="7" class="empty">No hay agricultores registrados</td></tr>
+          <tr><td colspan="9" class="empty">No hay agricultores registrados</td></tr>
         }
       </tbody>
     </table>

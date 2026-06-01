@@ -12,15 +12,20 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()">
       <div class="form-group">
-        <label>Correo electrónico</label>
-        <input type="email" formControlName="email" [class.invalid]="isInvalid('email')" placeholder="correo@ejemplo.pe" />
-        @if (isInvalid('email')) {
-          <span class="error-msg">Ingrese un correo válido</span>
+        <label>DNI o correo electrónico</label>
+        <input
+          formControlName="login"
+          [class.invalid]="isInvalid('login')"
+          placeholder="12345678 o correo@ejemplo.pe"
+          autocomplete="username"
+        />
+        @if (isInvalid('login')) {
+          <span class="error-msg">Ingrese su DNI (8 dígitos) o correo registrado</span>
         }
       </div>
       <div class="form-group">
         <label>Contraseña</label>
-        <input type="password" formControlName="password" [class.invalid]="isInvalid('password')" />
+        <input type="password" formControlName="password" [class.invalid]="isInvalid('password')" autocomplete="current-password" />
         @if (isInvalid('password')) {
           <span class="error-msg">Mínimo 6 caracteres</span>
         }
@@ -33,6 +38,6 @@
     <p class="auth-card__footer">
       ¿No tiene cuenta? <a routerLink="/auth/register">Registrarse</a>
     </p>
-    <small class="auth-card__hint">Demo: admin@agrijunin.pe / Admin123!</small>
+    <small class="auth-card__hint">Admin: admin@agrijunin.pe · Agricultor: use su DNI registrado</small>
   </div>
 </div>

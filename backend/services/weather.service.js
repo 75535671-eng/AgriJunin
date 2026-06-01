@@ -150,26 +150,9 @@ const parseOpenMeteo = (raw) => {
   };
 };
 
-/** Sincroniza clima real → registros, sensores y alertas inteligentes */
-const sincronizarClima = async (userId, loteId = null) => {
-  const clima = await fetchClimaHuancayo();
+/** Sincroniza un lote con datos de clima ya obtenidos */
+const sincronizarLoteConClima = async (userId, lote, clima) => {
   const { actual } = clima;
-
-  let lote;
-  if (loteId) {
-    const [rows] = await pool.query('SELECT l.*, l.cultivo_id FROM lotes l WHERE l.id = ? AND l.activo = 1', [loteId]);
-    lote = rows[0];
-  } else {
-    const [rows] = await pool.query(
-      `SELECT l.* FROM lotes l
-       WHERE l.activo = 1
-       ORDER BY l.codigo_lote LIKE 'LOT-HUA%' DESC, l.id ASC LIMIT 1`
-    );
-    lote = rows[0];
-  }
-
-  if (!lote) throw new Error('No hay lotes activos para sincronizar clima');
-
   const cultivoId = lote.cultivo_id || 1;
   const humedadSuelo = actual.humedad_suelo_estimada
     ? Math.round(actual.humedad_suelo_estimada * 10000) / 100
@@ -199,6 +182,7 @@ const sincronizarClima = async (userId, loteId = null) => {
   );
 
   const updates = [];
+  const alertasGeneradas = [];
   for (const sensor of sensores) {
     let lectura = null;
     if (sensor.tipo === 'temperatura') lectura = actual.temperatura;
@@ -214,11 +198,24 @@ const sincronizarClima = async (userId, loteId = null) => {
       );
       updates.push({ sensor_id: sensor.id, codigo: sensor.codigo_sensor, lectura });
     }
+
+    if (sensor.bateria_pct != null && sensor.bateria_pct < 50) {
+      const [a] = await pool.query(
+        `INSERT INTO alertas (lote_id, sensor_id, tipo, nivel, titulo, mensaje)
+         VALUES (?, ?, 'sensor', 'critica', ?, ?)`,
+        [
+          lote.id,
+          sensor.id,
+          `Batería baja — ${sensor.nombre}`,
+          `El sensor ${sensor.codigo_sensor} tiene ${sensor.bateria_pct}% de batería. Programar mantenimiento.`,
+        ]
+      );
+      alertasGeneradas.push({ id: a.insertId, tipo: 'sensor', nivel: 'critica' });
+    }
   }
 
   const [cultivoRows] = await pool.query('SELECT * FROM cultivos WHERE id = ?', [cultivoId]);
   const cultivo = cultivoRows[0];
-  const alertasGeneradas = [];
 
   if (cultivo) {
     if (
@@ -227,9 +224,10 @@ const sincronizarClima = async (userId, loteId = null) => {
       humedadSuelo < cultivo.humedad_optima_min
     ) {
       const [a] = await pool.query(
-        `INSERT INTO alertas (registro_id, tipo, nivel, titulo, mensaje)
-         VALUES (?, 'humedad', 'critica', ?, ?)`,
+        `INSERT INTO alertas (lote_id, registro_id, tipo, nivel, titulo, mensaje)
+         VALUES (?, ?, 'humedad', 'critica', ?, ?)`,
         [
+          lote.id,
           registroId,
           `Humedad baja en ${lote.nombre} (clima Huancayo)`,
           `Open-Meteo reporta humedad de suelo ${humedadSuelo}% bajo el mínimo óptimo (${cultivo.humedad_optima_min}%) para ${cultivo.nombre}.`,
@@ -243,9 +241,10 @@ const sincronizarClima = async (userId, loteId = null) => {
       actual.temperatura > cultivo.temp_optima_max
     ) {
       const [a] = await pool.query(
-        `INSERT INTO alertas (registro_id, tipo, nivel, titulo, mensaje)
-         VALUES (?, 'temperatura', 'advertencia', ?, ?)`,
+        `INSERT INTO alertas (lote_id, registro_id, tipo, nivel, titulo, mensaje)
+         VALUES (?, ?, 'temperatura', 'advertencia', ?, ?)`,
         [
+          lote.id,
           registroId,
           `Temperatura elevada — ${lote.nombre}`,
           `Clima Huancayo: ${actual.temperatura}°C supera el máximo óptimo (${cultivo.temp_optima_max}°C) para ${cultivo.nombre}.`,
@@ -256,9 +255,10 @@ const sincronizarClima = async (userId, loteId = null) => {
 
     if (actual.precipitacion > 5) {
       const [a] = await pool.query(
-        `INSERT INTO alertas (registro_id, tipo, nivel, titulo, mensaje)
-         VALUES (?, 'pluvia', 'info', ?, ?)`,
+        `INSERT INTO alertas (lote_id, registro_id, tipo, nivel, titulo, mensaje)
+         VALUES (?, ?, 'pluvia', 'info', ?, ?)`,
         [
+          lote.id,
           registroId,
           `Precipitación en Huancayo`,
           `Se detectó precipitación de ${actual.precipitacion} mm en la zona de ${lote.nombre}.`,
@@ -269,17 +269,93 @@ const sincronizarClima = async (userId, loteId = null) => {
   }
 
   return {
+    lote_id: lote.id,
+    lote_nombre: lote.nombre,
+    registro_id: registroId,
+    sensores_actualizados: updates.length,
+    sensores: updates,
+    alertas_generadas: alertasGeneradas.length,
+    alertas: alertasGeneradas,
+  };
+};
+
+/** Sincroniza clima real → un lote (registros, sensores y alertas) */
+const sincronizarClima = async (userId, loteId = null, scope = null) => {
+  const clima = await fetchClimaHuancayo();
+
+  let lote;
+  if (loteId) {
+    let sql = 'SELECT l.*, l.cultivo_id FROM lotes l WHERE l.id = ? AND l.activo = 1';
+    const params = [loteId];
+    if (scope?.rol === 'agricultor' && scope.agricultorId) {
+      sql += ' AND l.agricultor_id = ?';
+      params.push(scope.agricultorId);
+    }
+    const [rows] = await pool.query(sql, params);
+    lote = rows[0];
+  } else if (scope?.rol === 'agricultor' && scope.agricultorId) {
+    const [rows] = await pool.query(
+      `SELECT l.*, l.cultivo_id FROM lotes l
+       WHERE l.agricultor_id = ? AND l.activo = 1
+       ORDER BY l.id ASC LIMIT 1`,
+      [scope.agricultorId]
+    );
+    lote = rows[0];
+  } else {
+    const [rows] = await pool.query(
+      `SELECT l.*, l.cultivo_id FROM lotes l
+       WHERE l.activo = 1
+       ORDER BY l.codigo_lote LIKE 'LOT-HUA%' DESC, l.id ASC LIMIT 1`
+    );
+    lote = rows[0];
+  }
+
+  if (!lote) {
+    throw new Error(
+      scope?.rol === 'agricultor'
+        ? 'No tiene lotes activos para sincronizar el clima'
+        : 'No hay lotes activos para sincronizar clima'
+    );
+  }
+
+  const sincronizacion = await sincronizarLoteConClima(userId, lote, clima);
+  return { clima, sincronizacion };
+};
+
+/** Sincroniza clima en todos los lotes activos (administrador / técnico) */
+const sincronizarClimaTodos = async (userId) => {
+  const clima = await fetchClimaHuancayo();
+  const [lotes] = await pool.query(
+    `SELECT l.*, l.cultivo_id FROM lotes l
+     WHERE l.activo = 1
+     ORDER BY l.id ASC`
+  );
+
+  if (!lotes.length) {
+    throw new Error('No hay lotes activos para sincronizar clima');
+  }
+
+  const detalle = [];
+  let totalSensores = 0;
+  let totalAlertas = 0;
+
+  for (const lote of lotes) {
+    const sync = await sincronizarLoteConClima(userId, lote, clima);
+    totalSensores += sync.sensores_actualizados;
+    totalAlertas += sync.alertas_generadas;
+    detalle.push(sync);
+  }
+
+  return {
     clima,
     sincronizacion: {
-      lote_id: lote.id,
-      lote_nombre: lote.nombre,
-      registro_id: registroId,
-      sensores_actualizados: updates.length,
-      sensores: updates,
-      alertas_generadas: alertasGeneradas.length,
-      alertas: alertasGeneradas,
+      todos_lotes: true,
+      lotes_procesados: detalle.length,
+      total_sensores_actualizados: totalSensores,
+      total_alertas_generadas: totalAlertas,
+      lotes: detalle,
     },
   };
 };
 
-module.exports = { fetchClimaHuancayo, sincronizarClima, HUANCAYO };
+module.exports = { fetchClimaHuancayo, sincronizarClima, sincronizarClimaTodos, HUANCAYO };

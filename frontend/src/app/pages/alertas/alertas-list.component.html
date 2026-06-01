@@ -1,4 +1,6 @@
-<app-page-header title="Alertas inteligentes" subtitle="Notificaciones del sistema de monitoreo"
+<app-relation-banner hint="Las alertas pueden originarse en un registro agrícola, un sensor IoT o un lote (tipo sistema)." />
+
+<app-page-header title="Alertas inteligentes" subtitle="Vinculadas al lote, agricultor y cultivo del registro"
   actionLabel="Nueva alerta" [showAction]="auth.canEdit()" (actionClick)="router.navigate(['/alertas/nuevo'])" />
 
 <div class="alerts-grid">
@@ -11,7 +13,12 @@
       <h4>{{ a.titulo }}</h4>
       <p>{{ a.mensaje }}</p>
       <footer class="alert-card__footer">
-        <small>{{ a.lote_nombre }} — {{ a.fecha_alerta | date:'medium' }}</small>
+        <small>
+          👨‍🌾 {{ a.agricultor_nombre || '—' }} · 🗺️ {{ a.lote_nombre || '—' }}
+          @if (a.cultivo_nombre) { · 🌱 {{ a.cultivo_nombre }} }
+          @if (a.codigo_sensor) { · 📡 {{ a.codigo_sensor }} }
+          — {{ a.fecha_alerta | date:'medium' }}
+        </small>
         <div class="alert-card__actions">
           @if (!a.leida) { <span class="badge badge--warning">Nueva</span> }
           @if (auth.canEdit()) { <a [routerLink]="['/alertas', a.id, 'editar']" class="btn btn--outline btn--sm">Editar</a> }

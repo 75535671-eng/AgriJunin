@@ -12,14 +12,17 @@ foreach ($port in 3000, 4200) {
 
 Start-Sleep -Seconds 1
 
+# Ejecutar desde D:\agri-junin (sin '%' en la ruta; Vite/Angular fallan con PROYECTO-80%-ING-WEB)
+$projectRoot = if (Test-Path 'D:\agri-junin\backend') { 'D:\agri-junin' } else { $PSScriptRoot }
+
 # Backend
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\backend'; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\backend'; npm run dev"
 Write-Host "Backend iniciando en http://localhost:3000"
 
 Start-Sleep -Seconds 3
 
 # Frontend
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\frontend'; npx ng serve --open"
-Write-Host "Frontend iniciando en http://localhost:4200"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\frontend'; npx ng serve --host 127.0.0.1 --port 4200 --open"
+Write-Host "Frontend iniciando en http://127.0.0.1:4200"
 Write-Host ""
 Write-Host "Login: admin@agrijunin.pe / Admin123!" -ForegroundColor Cyan
