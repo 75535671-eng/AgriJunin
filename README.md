@@ -1,3 +1,4 @@
+El Proyecto al 80% esta en Enriquez_Millan
 # Sistema Web de Agricultura Inteligente — Región Junín
 
 Plataforma Full Stack profesional para gestión de agricultores, cultivos, lotes, sensores IoT, monitoreo ambiental y alertas inteligentes.
