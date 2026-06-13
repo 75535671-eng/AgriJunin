@@ -6,3 +6,8 @@ dist/
 .idea/
 .vscode/
 coverage/
+__pycache__/
+*.pyc
+.venv/
+.angular/
+*.egg-info/

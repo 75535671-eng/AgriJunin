@@ -1,0 +1,81 @@
+@if (prompt.isVisible()) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card card">
+      <h2>🌤️ ¿Sincronizar clima de Huancayo?</h2>
+      @if (isStaff()) {
+        <p class="modal-desc">
+          Como {{ auth.roleLabel() }}, el clima se importará automáticamente a
+          <strong>todos los lotes activos</strong> (registros, sensores y alertas).
+          Si continúa sin sincronizar, verá los datos que ya tenía guardados.
+        </p>
+      } @else {
+        <p class="modal-desc">
+          Puede importar el clima real de Open-Meteo a <strong>registros</strong>,
+          <strong>sensores</strong> y <strong>alertas</strong> de su lote.
+          Si continúa sin sincronizar, verá los datos que ya tenía guardados en el sistema.
+        </p>
+      }
+
+      @if (weather.loading()) {
+        <p class="loading">Cargando clima actual...</p>
+      } @else if (weather.clima(); as c) {
+        <div class="modal-clima">
+          <app-clima-widget [clima]="c" />
+        </div>
+      }
+
+      @if (!isStaff() && lotes().length > 1) {
+        <div class="form-group">
+          <label>Lote a actualizar</label>
+          <select [ngModel]="loteId()" (ngModelChange)="loteId.set(+$event)">
+            @for (l of lotes(); track l.id) {
+              <option [value]="l.id">{{ l.codigo_lote }} — {{ l.nombre }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      @if (isStaff() && lotes().length) {
+        <p class="info-badge">
+          Se actualizarán <strong>{{ lotes().length }}</strong> lote(s) activo(s) con el mismo clima de Huancayo.
+        </p>
+      }
+
+      @if (resultMsg()) {
+        <div class="alert alert--success">{{ resultMsg() }}</div>
+      }
+      @if (weather.error()) {
+        <div class="alert alert--error">{{ weather.error() }}</div>
+      }
+
+      @if (weather.syncing() && isStaff()) {
+        <p class="loading">Sincronizando todos los lotes...</p>
+      }
+
+      <label class="checkbox-skip">
+        <input type="checkbox" [ngModel]="skipFuture()" (ngModelChange)="skipFuture.set($event)" />
+        No volver a mostrar al iniciar sesión
+      </label>
+
+      <div class="modal-actions">
+        @if (!isStaff()) {
+          <button
+            type="button"
+            class="btn btn--primary"
+            (click)="sincronizarUnLote()"
+            [disabled]="weather.syncing() || !lotes().length"
+          >
+            {{ weather.syncing() ? 'Sincronizando...' : 'Sincronizar con sistema' }}
+          </button>
+        }
+        <button type="button" class="btn btn--outline" (click)="continuar()" [disabled]="weather.syncing()">
+          {{ isStaff() && weather.syncing() ? 'Omitir (en curso)...' : 'Continuar sin sincronizar' }}
+        </button>
+      </div>
+
+      @if (!lotes().length) {
+        <p class="muted">No hay lotes activos. Continúe para usar el sistema con los datos existentes.</p>
+      }
+    </div>
+  </div>
+}

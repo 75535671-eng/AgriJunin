@@ -1,0 +1,54 @@
+<h2>{{ isEdit() ? 'Editar' : 'Nuevo' }} registro agrícola</h2>
+
+@if (error()) {
+  <p class="form-error">{{ error() }}</p>
+}
+
+<form (ngSubmit)="save()" class="card form-card">
+  <div class="form-grid">
+    <div class="form-group full">
+      <label>Lote *</label>
+      <select [formField]="registroForm.lote_id">
+        @for (l of lookup.lotes(); track l.id) {
+          <option [value]="l.id">{{ l.nombre }} — {{ l.cultivo_nombre || 'sin cultivo' }}</option>
+        }
+      </select>
+      @if (showFieldError(registroForm.lote_id)) {
+        <span class="error-msg">{{ firstFieldError(registroForm.lote_id) }}</span>
+      }
+      <small class="hint">El cultivo se obtiene automáticamente del lote seleccionado (3FN).</small>
+    </div>
+    <div class="form-group">
+      <label>Temperatura °C</label>
+      <input type="number" step="0.1" [formField]="registroForm.temperatura" />
+    </div>
+    <div class="form-group">
+      <label>Humedad suelo %</label>
+      <input type="number" step="0.1" [formField]="registroForm.humedad_suelo" />
+    </div>
+    <div class="form-group">
+      <label>Humedad aire %</label>
+      <input type="number" step="0.1" [formField]="registroForm.humedad_aire" />
+    </div>
+    <div class="form-group">
+      <label>pH suelo</label>
+      <input type="number" step="0.01" [formField]="registroForm.ph_suelo" />
+    </div>
+    <div class="form-group">
+      <label>Precipitación mm</label>
+      <input type="number" step="0.1" [formField]="registroForm.precipitacion_mm" />
+    </div>
+    <div class="form-group">
+      <label>Producción kg</label>
+      <input type="number" step="0.01" [formField]="registroForm.produccion_kg" />
+    </div>
+    <div class="form-group full">
+      <label>Observaciones</label>
+      <textarea [formField]="registroForm.observaciones" rows="3"></textarea>
+    </div>
+  </div>
+  <div class="form-actions">
+    <a routerLink="/registros" class="btn btn--outline">Cancelar</a>
+    <button type="submit" class="btn btn--primary" [disabled]="loading()">Guardar</button>
+  </div>
+</form>

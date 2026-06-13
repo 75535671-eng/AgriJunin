@@ -1,0 +1,13 @@
+<div class="page-header">
+  <div class="page-header__text">
+    <h2>{{ title() }}</h2>
+    @if (subtitle()) {
+      <p>{{ subtitle() }}</p>
+    }
+  </div>
+  @if (showAction()) {
+    <button type="button" class="btn btn--primary page-header__btn" (click)="actionClick.emit()">
+      + {{ actionLabel() }}
+    </button>
+  }
+</div>

@@ -10,19 +10,28 @@
       <div class="alert alert--error">{{ error() }}</div>
     }
 
-    <form [formGroup]="form" (ngSubmit)="submit()">
+    <form (ngSubmit)="submit()">
       <div class="form-group">
-        <label>Correo electrónico</label>
-        <input type="email" formControlName="email" [class.invalid]="isInvalid('email')" placeholder="correo@ejemplo.pe" />
-        @if (isInvalid('email')) {
-          <span class="error-msg">Ingrese un correo válido</span>
+        <label>DNI o correo electrónico</label>
+        <input
+          type="text"
+          [formField]="loginForm.login"
+          placeholder="12345678 o correo@ejemplo.pe"
+          autocomplete="username"
+        />
+        @if (showFieldError(loginForm.login)) {
+          <span class="error-msg">{{ firstFieldError(loginForm.login) }}</span>
         }
       </div>
       <div class="form-group">
         <label>Contraseña</label>
-        <input type="password" formControlName="password" [class.invalid]="isInvalid('password')" />
-        @if (isInvalid('password')) {
-          <span class="error-msg">Mínimo 6 caracteres</span>
+        <input
+          type="password"
+          [formField]="loginForm.password"
+          autocomplete="current-password"
+        />
+        @if (showFieldError(loginForm.password)) {
+          <span class="error-msg">{{ firstFieldError(loginForm.password) }}</span>
         }
       </div>
       <button type="submit" class="btn btn--primary auth-card__submit" [disabled]="loading()">
@@ -33,6 +42,6 @@
     <p class="auth-card__footer">
       ¿No tiene cuenta? <a routerLink="/auth/register">Registrarse</a>
     </p>
-    <small class="auth-card__hint">Demo: admin@agrijunin.pe / Admin123!</small>
+    <small class="auth-card__hint">Admin: admin@agrijunin.pe · Agricultor: use su DNI registrado</small>
   </div>
 </div>

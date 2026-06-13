@@ -1,0 +1,20 @@
+<div class="relation-banner card">
+  <p class="relation-banner__title">{{ title() }}</p>
+  <div class="relation-banner__chain">
+    <a routerLink="/agricultores" class="relation-banner__node">👨‍🌾 Agricultor</a>
+    <span class="relation-banner__arrow">→</span>
+    <a routerLink="/cultivos" class="relation-banner__node">🌱 Cultivo</a>
+    <span class="relation-banner__arrow">→</span>
+    <a routerLink="/lotes" class="relation-banner__node relation-banner__node--key">🗺️ Lote</a>
+    <span class="relation-banner__hint">(une ambos)</span>
+    <span class="relation-banner__arrow">→</span>
+    <span class="relation-banner__node">📡 Sensor</span>
+    <span class="relation-banner__arrow">→</span>
+    <span class="relation-banner__node">📋 Registro</span>
+    <span class="relation-banner__arrow">→</span>
+    <span class="relation-banner__node">🔔 Alerta</span>
+  </div>
+  @if (hint()) {
+    <p class="relation-banner__desc">{{ hint() }}</p>
+  }
+</div>

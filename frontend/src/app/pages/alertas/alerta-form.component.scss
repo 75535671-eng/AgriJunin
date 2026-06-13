@@ -1,0 +1,7 @@
+@use '../../shared/styles/form-layout' as *;
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}

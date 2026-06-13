@@ -1,0 +1,37 @@
+@use '../../shared/styles/filter-chip' as *;
+
+.filtros {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.link {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.rel-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+code {
+  font-size: 0.8rem;
+  background: #f0f4f0;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.row-pendiente {
+  background: #fffbeb;
+}
+
+.motivo {
+  display: block;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}

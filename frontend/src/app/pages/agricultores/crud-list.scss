@@ -1,3 +1,16 @@
+.hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.profile-card {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--primary-dark);
+}
+
 .toolbar {
   padding: 1rem;
   margin-bottom: 1rem;
@@ -27,6 +40,72 @@
   color: var(--text-muted);
   font-size: 0.85rem;
   text-align: center;
+}
+
+.link-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: #e8f5e9;
+  color: var(--primary-dark);
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-decoration: none;
+  &:hover { background: var(--primary); color: white; }
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.lotes-cultivos-cell {
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.lotes-cultivos-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__item {
+    padding: 0.45rem 0.55rem;
+    background: #f4f9f6;
+    border-radius: 8px;
+    border-left: 3px solid var(--primary, #2d6a4f);
+  }
+
+  &__main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  &__cultivo {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--primary-dark);
+  }
+
+  &__meta {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+}
+
+.lote-link {
+  color: var(--primary);
+  font-weight: 500;
+  &:hover { text-decoration: underline; }
 }
 
 .empty, .loading {

@@ -1,8 +1,36 @@
 <div class="dashboard">
-  <header class="dashboard__intro">
-    <h2>Panel de Control</h2>
-    <p>Monitoreo en tiempo real — Región Junín</p>
-  </header>
+  @if (stats()?.contexto; as ctx) {
+    <header class="dashboard__intro">
+      <div>
+        <span class="dashboard__role-badge">{{ auth.roleLabel() }}</span>
+        <h2>{{ ctx.titulo }}</h2>
+        <p>{{ ctx.descripcion }}</p>
+      </div>
+    </header>
+
+    @if (auth.isAgricultor() && !ctx.agricultorVinculado) {
+      <div class="alert alert--warning dashboard__warn">
+        Su usuario no está vinculado a una ficha de agricultor. Contacte al administrador para asociar su cuenta.
+      </div>
+    }
+
+    <div class="card dashboard__flow">
+      <h3>¿Cómo se relacionan los módulos?</h3>
+      <ol class="flow-steps">
+        @for (step of ctx.flujo; track step.paso) {
+          <li>
+            <strong>{{ step.modulo }}</strong>
+            <span>{{ step.descripcion }}</span>
+          </li>
+        }
+      </ol>
+    </div>
+  } @else {
+    <header class="dashboard__intro">
+      <h2>Panel de Control</h2>
+      <p>Monitoreo en tiempo real — Región Junín</p>
+    </header>
+  }
 
   @if (loading()) {
     <p class="loading">Cargando estadísticas...</p>
@@ -15,12 +43,43 @@
     }
 
     <div class="dashboard__kpis">
-      <app-stat-card label="Agricultores activos" [value]="s.kpis.totalAgricultores" icon="👨‍🌾" color="#2d6a4f" />
-      <app-stat-card label="Cultivos registrados" [value]="s.kpis.totalCultivos" icon="🌱" color="#40916c" />
-      <app-stat-card label="Sensores activos" [value]="s.kpis.sensoresActivos" icon="📡" color="#457b9d" />
+      @if (showKpiAgricultores()) {
+        <app-stat-card label="Agricultores activos" [value]="s.kpis.totalAgricultores" icon="👨‍🌾" color="#2d6a4f" />
+      }
+      <app-stat-card
+        [label]="auth.isAgricultor() ? 'Mis cultivos en lotes' : 'Cultivos registrados'"
+        [value]="s.kpis.totalCultivos"
+        icon="🌱"
+        color="#40916c"
+      />
+      <app-stat-card
+        [label]="auth.isAgricultor() ? 'Sensores en mis lotes' : 'Sensores activos'"
+        [value]="s.kpis.sensoresActivos"
+        icon="📡"
+        color="#457b9d"
+      />
       <app-stat-card label="Alertas críticas" [value]="s.kpis.alertasCriticas" icon="🔔" color="#d62828" subtitle="Sin resolver" />
-      <app-stat-card label="Lotes agrícolas" [value]="s.kpis.totalLotes" icon="🗺️" color="#1b4332" />
+      <app-stat-card
+        [label]="auth.isAgricultor() ? 'Mis lotes' : 'Lotes agrícolas'"
+        [value]="s.kpis.totalLotes"
+        icon="🗺️"
+        color="#1b4332"
+      />
       <app-stat-card label="Producción semanal" [value]="s.kpis.produccionSemanalKg + ' kg'" icon="📈" color="#f4a261" />
+    </div>
+
+    <div class="dashboard__quick-links card">
+      <h3>Accesos rápidos</h3>
+      <div class="quick-links">
+        <a routerLink="/lotes" class="quick-links__item">🗺️ Lotes</a>
+        @if (auth.canManageAgricultores()) {
+          <a routerLink="/agricultores" class="quick-links__item">👨‍🌾 Agricultores</a>
+        }
+        <a routerLink="/cultivos" class="quick-links__item">🌱 Cultivos</a>
+        <a routerLink="/sensores" class="quick-links__item">📡 Sensores</a>
+        <a routerLink="/registros" class="quick-links__item">📋 Registros</a>
+        <a routerLink="/alertas" class="quick-links__item">🔔 Alertas</a>
+      </div>
     </div>
 
     <div class="dashboard__grid">
@@ -53,17 +112,19 @@
         </ul>
       </div>
 
-      <div class="card chart-card">
-        <h3>Estado de sensores</h3>
-        <ul class="list-stats">
-          @for (sen of s.sensoresPorEstado; track sen.estado) {
-            <li>
-              <span>{{ sen.estado }}</span>
-              <strong>{{ sen.cantidad }}</strong>
-            </li>
-          }
-        </ul>
-      </div>
+      @if (auth.canEdit()) {
+        <div class="card chart-card">
+          <h3>Estado de sensores</h3>
+          <ul class="list-stats">
+            @for (sen of s.sensoresPorEstado; track sen.estado) {
+              <li>
+                <span>{{ sen.estado }}</span>
+                <strong>{{ sen.cantidad }}</strong>
+              </li>
+            }
+          </ul>
+        </div>
+      }
 
       <div class="card alerts-card">
         <h3>Últimas alertas</h3>

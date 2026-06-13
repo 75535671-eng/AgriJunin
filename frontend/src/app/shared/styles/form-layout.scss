@@ -1,0 +1,24 @@
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-error {
+  color: var(--danger);
+  margin-bottom: 1rem;
+}
+
+.form-card {
+  padding: 1.5rem;
+}

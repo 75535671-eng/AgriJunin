@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthData, Usuario } from '../../models';
+import { AuthData, Rol, Usuario } from '../../models';
+import { ROLE_LABELS } from '../config/role-permissions';
 
 const TOKEN_KEY = 'agri_token';
 const USER_KEY = 'agri_user';
@@ -23,8 +24,18 @@ export class AuthStateService {
 
   readonly isAdmin = computed(() => this._user()?.rol === 'administrador');
   readonly isTecnico = computed(() => this._user()?.rol === 'tecnico');
+  readonly isAgricultor = computed(() => this._user()?.rol === 'agricultor');
+  readonly roleLabel = computed(() => {
+    const rol = this._user()?.rol;
+    return rol ? ROLE_LABELS[rol as Rol] : '';
+  });
   readonly canEdit = computed(() =>
     ['administrador', 'tecnico'].includes(this._user()?.rol ?? '')
+  );
+  readonly canManageAgricultores = computed(() => this.isAdmin() || this.isTecnico());
+  readonly canManageLotes = computed(() => this.canEdit() || this.isAgricultor());
+  readonly canSyncClima = computed(() =>
+    ['administrador', 'tecnico', 'agricultor'].includes(this._user()?.rol ?? '')
   );
 
   constructor() {
@@ -38,7 +49,7 @@ export class AuthStateService {
     });
   }
 
-  setSession(data: AuthData): void {
+  setSession(data: { user: AuthData['user']; token: string }): void {
     this._token.set(data.token);
     this._user.set(data.user);
   }

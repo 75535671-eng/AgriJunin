@@ -1,0 +1,23 @@
+@if (clima(); as c) {
+  <div class="clima-widget">
+    <div class="clima-widget__main">
+      <span class="clima-widget__temp">{{ c.actual.temperatura | number:'1.1-1' }}°C</span>
+      <div>
+        <strong>{{ c.ubicacion.ciudad }}, {{ c.ubicacion.region }}</strong>
+        <p>{{ c.actual.descripcion }}</p>
+        <small>Actualizado: {{ c.ubicacion.actualizado | date:'short' }}</small>
+      </div>
+    </div>
+    <div class="clima-widget__stats">
+      <div><span>💧</span><strong>{{ c.actual.humedad }}%</strong><small>Humedad</small></div>
+      <div><span>🌧️</span><strong>{{ c.actual.precipitacion }} mm</strong><small>Lluvia</small></div>
+      <div><span>💨</span><strong>{{ c.actual.viento_kmh }} km/h</strong><small>Viento</small></div>
+      @if (c.actual.humedad_suelo_estimada != null) {
+        <div><span>🌱</span><strong>{{ (c.actual.humedad_suelo_estimada * 100) | number:'1.0-0' }}%</strong><small>Suelo est.</small></div>
+      }
+    </div>
+    <footer class="clima-widget__footer">
+      Fuente: <a href="https://open-meteo.com/" target="_blank" rel="noopener">{{ c.fuente }}</a> ({{ c.licencia }})
+    </footer>
+  </div>
+}

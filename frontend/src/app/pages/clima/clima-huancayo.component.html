@@ -8,9 +8,15 @@
       <button class="btn btn--outline" (click)="refresh()" [disabled]="weather.loading()">
         {{ weather.loading() ? 'Cargando...' : 'Actualizar' }}
       </button>
-      @if (auth.canEdit()) {
+      @if (auth.canSyncClima()) {
         <button class="btn btn--primary" (click)="sincronizar()" [disabled]="weather.syncing()">
-          {{ weather.syncing() ? 'Sincronizando...' : '↻ Sincronizar con sistema' }}
+          {{
+            weather.syncing()
+              ? 'Sincronizando...'
+              : isStaff()
+                ? '↻ Sincronizar todos los lotes'
+                : '↻ Sincronizar con sistema'
+          }}
         </button>
       }
     </div>
@@ -29,14 +35,23 @@
   } @else if (weather.clima(); as c) {
     <app-clima-widget [clima]="c" />
 
-    @if (auth.canEdit()) {
+    @if (auth.canSyncClima()) {
       <div class="card sync-card">
         <h3>Sincronizar con lotes y sensores</h3>
-        <p>Importa temperatura, humedad y lluvia reales a registros agrícolas y actualiza sensores del lote.</p>
+        @if (isStaff()) {
+          <p>
+            Por defecto se actualizan <strong>todos los lotes activos</strong> con el clima de Huancayo.
+            Elija un lote si desea sincronizar solo uno.
+          </p>
+        } @else {
+          <p>Importa temperatura, humedad y lluvia reales a registros agrícolas y actualiza sensores del lote.</p>
+        }
         <div class="form-group">
-          <label>Lote destino (opcional)</label>
+          <label>{{ isStaff() ? 'Lote específico (opcional)' : 'Lote destino (opcional)' }}</label>
           <select [ngModel]="loteSeleccionado()" (ngModelChange)="loteSeleccionado.set($event ? +$event : undefined)">
-            <option [ngValue]="undefined">Automático (Lote Huancayo)</option>
+            <option [ngValue]="undefined">
+              {{ isStaff() ? 'Todos los lotes activos' : 'Automático (Lote Huancayo)' }}
+            </option>
             @for (l of lookup.lotes(); track l.id) {
               <option [value]="l.id">{{ l.codigo_lote }} — {{ l.nombre }}</option>
             }

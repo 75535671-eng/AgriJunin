@@ -1,0 +1,99 @@
+<app-relation-banner
+  hint="Catálogo de cultivos. Como agricultor puede solicitar uno nuevo; técnico o administrador lo aprueba antes de usarlo en lotes."
+/>
+
+<app-page-header
+  title="Cultivos"
+  [subtitle]="auth.isAgricultor() ? 'Solicite nuevos productos para aprobación' : 'Catálogo y solicitudes pendientes'"
+  [actionLabel]="auth.isAgricultor() ? 'Solicitar cultivo' : 'Nuevo cultivo'"
+  [showAction]="auth.canEdit() || auth.isAgricultor()"
+  (actionClick)="router.navigate(['/cultivos/nuevo'])"
+/>
+
+@if (auth.canEdit()) {
+  <div class="toolbar card filter-tabs">
+    <button type="button" class="btn btn--sm" [class.btn--primary]="filtro() === 'todos'" (click)="setFiltro('todos')">Todos</button>
+    <button type="button" class="btn btn--sm" [class.btn--primary]="filtro() === 'pendientes'" (click)="setFiltro('pendientes')">Pendientes de aprobar</button>
+    <button type="button" class="btn btn--sm" [class.btn--primary]="filtro() === 'aprobados'" (click)="setFiltro('aprobados')">Aprobados</button>
+  </div>
+}
+
+<div class="toolbar card">
+  <input type="search" placeholder="Buscar cultivo..." [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+</div>
+
+<div class="card table-wrap">
+  @if (store.loading()) {
+    <p class="loading">Cargando...</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Estado solicitud</th>
+          <th>Lote</th>
+          @if (!auth.isAgricultor()) { <th>Lotes activos</th> }
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of store.items(); track c.id) {
+          <tr [class.row-pendiente]="c.estado_aprobacion === 'pendiente'">
+            <td>
+              <strong>{{ c.nombre }}</strong>
+              @if (c.nombre_cientifico) { <br><small>{{ c.nombre_cientifico }}</small> }
+              @if (c.solicitante_nombre && auth.canEdit()) {
+                <br><small class="muted">Solicitó: {{ c.solicitante_nombre }}</small>
+              }
+            </td>
+            <td><span class="badge badge--success">{{ c.tipo }}</span></td>
+            <td>
+              <span class="badge" [class]="aprobacionClass(c)">{{ aprobacionLabel(c) }}</span>
+              @if (c.estado_aprobacion === 'rechazado' && c.motivo_rechazo) {
+                <br><small class="muted">{{ c.motivo_rechazo }}</small>
+              }
+            </td>
+            <td>
+              @if (c.lote_solicitud_codigo) {
+                <span class="link-badge" title="Lote donde se usará este cultivo">
+                  🗺️ {{ c.lote_solicitud_codigo }} — {{ c.lote_solicitud_nombre }}
+                </span>
+              } @else if (c.estado_aprobacion === 'aprobado' && c.total_lotes) {
+                <span class="muted">Ver lotes →</span>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </td>
+            @if (!auth.isAgricultor()) {
+              <td>
+                @if (c.total_lotes && c.estado_aprobacion === 'aprobado') {
+                  <a [routerLink]="['/lotes']" [queryParams]="{ cultivo_id: c.id }" class="link-badge">{{ c.total_lotes }} lote(s)</a>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            }
+            <td class="actions">
+              @if (c.estado_aprobacion === 'pendiente' && auth.canEdit()) {
+                <button type="button" class="btn btn--primary btn--sm" (click)="aprobar(c)">Aprobar</button>
+                <button type="button" class="btn btn--danger btn--sm" (click)="rechazar(c)">Rechazar</button>
+              }
+              @if (auth.canEdit() && c.estado_aprobacion === 'aprobado') {
+                <a [routerLink]="['/cultivos', c.id, 'editar']" class="btn btn--outline btn--sm">Editar</a>
+              }
+              @if (auth.isAgricultor() && c.estado_aprobacion === 'pendiente' && c.solicitado_por === auth.user()?.id) {
+                <a [routerLink]="['/cultivos', c.id, 'editar']" class="btn btn--outline btn--sm">Editar solicitud</a>
+              }
+              @if (auth.isAdmin() && c.estado_aprobacion === 'aprobado') {
+                <button class="btn btn--danger btn--sm" (click)="del(c.id!)">Eliminar</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td [attr.colspan]="auth.isAgricultor() ? 5 : 6" class="empty">Sin cultivos</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

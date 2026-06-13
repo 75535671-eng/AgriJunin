@@ -1,0 +1,64 @@
+<app-relation-banner hint="Cada sensor está instalado en un lote (agricultor + cultivo)." />
+
+<app-page-header
+  title="Sensores IoT"
+  subtitle="Vinculados a un lote concreto"
+  actionLabel="Nuevo sensor"
+  [showAction]="auth.canEdit()"
+  (actionClick)="router.navigate(['/sensores/nuevo'])"
+/>
+
+@if (filterLoteId()) {
+  <div class="filter-chip card">
+    <span>Filtrando por lote #{{ filterLoteId() }}</span>
+    <a routerLink="/sensores" class="btn btn--outline btn--sm">Ver todos</a>
+  </div>
+}
+
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Agricultor</th>
+        <th>Lote</th>
+        <th>Cultivo</th>
+        <th>Última lectura</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (s of store.items(); track s.id) {
+        <tr>
+          <td>{{ s.codigo_sensor }}</td>
+          <td>{{ s.nombre }}</td>
+          <td>{{ s.agricultor_nombre || '—' }}</td>
+          <td>
+            <a [routerLink]="['/sensores']" [queryParams]="{ lote_id: s.lote_id }">{{ s.lote_nombre }}</a>
+          </td>
+          <td>{{ s.cultivo_nombre || '—' }}</td>
+          <td>{{ s.ultima_lectura }} {{ s.unidad_medida }}</td>
+          <td>
+            <span
+              class="badge"
+              [class.badge--success]="s.estado === 'activo'"
+              [class.badge--warning]="s.estado === 'mantenimiento'"
+            >{{ s.estado }}</span>
+          </td>
+          <td class="actions">
+            @if (auth.canEdit()) {
+              <a [routerLink]="['/sensores', s.id, 'editar']" class="btn btn--outline btn--sm">Editar</a>
+            }
+            @if (auth.isAdmin()) {
+              <button class="btn btn--danger btn--sm" (click)="del(s.id!)">Eliminar</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="8" class="empty">Sin sensores</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

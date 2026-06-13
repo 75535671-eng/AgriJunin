@@ -1,3 +1,5 @@
+<app-clima-sync-modal />
+
 <div class="layout" [class.sidebar-open]="sidebarOpen()" [class.sidebar-collapsed]="!sidebarOpen()">
   @if (isOverlay()) {
     <div class="sidebar-backdrop" (click)="closeSidebar()" aria-hidden="true"></div>
@@ -14,27 +16,46 @@
         <button type="button" class="sidebar__close" (click)="closeSidebar()" aria-label="Cerrar menú">×</button>
       }
     </div>
+
+    <p class="sidebar__flow-hint">
+      Flujo: <strong>Agricultor</strong> → Cultivo → Lote → Sensor → Registro → Alerta
+    </p>
+
     <nav class="sidebar__nav">
-      @for (item of navItems; track item.path) {
-        @if (canSee(item)) {
-          <a
-            [routerLink]="item.path"
-            routerLinkActive="active"
-            class="sidebar__link"
-            (click)="closeSidebarOnNavigate()"
-          >
-            <span>{{ item.icon }}</span>
-            {{ item.label }}
-          </a>
+      @for (section of navSections(); track section.title) {
+        @if (canSeeSection(section)) {
+          <div class="sidebar__section">
+            <span class="sidebar__section-title">{{ section.title }}</span>
+            @for (item of section.items; track item.path) {
+              @if (canSeeItem(item)) {
+                <a
+                  [routerLink]="item.path"
+                  routerLinkActive="active"
+                  class="sidebar__link"
+                  [title]="item.hint || ''"
+                  (click)="closeSidebarOnNavigate()"
+                >
+                  <span>{{ item.icon }}</span>
+                  <span class="sidebar__link-text">
+                    {{ item.label }}
+                    @if (item.hint) {
+                      <small>{{ item.hint }}</small>
+                    }
+                  </span>
+                </a>
+              }
+            }
+          </div>
         }
       }
     </nav>
+
     <div class="sidebar__footer">
       <div class="user-chip">
         <span class="user-chip__avatar">{{ auth.userName().charAt(0) }}</span>
         <div>
           <strong>{{ auth.userName() }}</strong>
-          <small>{{ auth.userRole() }}</small>
+          <small>{{ auth.roleLabel() }}</small>
         </div>
       </div>
       <button type="button" class="btn btn--outline btn--sm" (click)="logout()">Cerrar sesión</button>
@@ -46,10 +67,10 @@
       <button type="button" class="navbar__toggle" (click)="toggleSidebar()" aria-label="Abrir menú">☰</button>
       <div class="navbar__title">
         <h1>AgriJunín</h1>
-        <p class="hide-mobile">Región Junín — Monitoreo y gestión agrícola</p>
+        <p class="hide-mobile">{{ auth.roleLabel() }} — Región Junín</p>
       </div>
       <div class="navbar__actions">
-        <span class="badge badge--success hide-mobile">En línea</span>
+        <span class="badge badge--success hide-mobile">{{ auth.roleLabel() }}</span>
       </div>
     </header>
     <main class="content">

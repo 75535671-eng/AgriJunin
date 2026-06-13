@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { finalize, tap } from 'rxjs';
 import { ApiService } from '../core/services/api.service';
 import { ClimaHuancayo, SincronizacionClima } from '../models';
 
@@ -37,19 +38,38 @@ export class WeatherService {
     this._clima.set(data);
   }
 
-  sincronizar(loteId?: number): void {
+  sincronizar(loteId?: number) {
     this._syncing.set(true);
     this._error.set(null);
-    this.api.post<SincronizacionClima>('clima/sincronizar', loteId ? { lote_id: loteId } : {}).subscribe({
-      next: (res) => {
-        this._clima.set(res.data.clima);
-        this._lastSync.set(res.data);
-        this._syncing.set(false);
-      },
-      error: (err) => {
-        this._error.set(err?.error?.message || 'Error al sincronizar');
-        this._syncing.set(false);
-      },
-    });
+    return this.api
+      .post<SincronizacionClima>('clima/sincronizar', loteId ? { lote_id: loteId } : {})
+      .pipe(
+        tap({
+          next: (res) => this.applySyncResult(res.data),
+          error: (err) => {
+            this._error.set(err?.error?.message || 'Error al sincronizar');
+          },
+        }),
+        finalize(() => this._syncing.set(false))
+      );
+  }
+
+  sincronizarTodos() {
+    this._syncing.set(true);
+    this._error.set(null);
+    return this.api.post<SincronizacionClima>('clima/sincronizar', { todos: true }).pipe(
+      tap({
+        next: (res) => this.applySyncResult(res.data),
+        error: (err) => {
+          this._error.set(err?.error?.message || 'Error al sincronizar');
+        },
+      }),
+      finalize(() => this._syncing.set(false))
+    );
+  }
+
+  private applySyncResult(data: SincronizacionClima): void {
+    this._clima.set(data.clima);
+    this._lastSync.set(data);
   }
 }

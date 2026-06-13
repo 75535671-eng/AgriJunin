@@ -1,0 +1,10 @@
+<div class="stat-card" [style.--accent-color]="color()">
+  <div class="stat-card__icon">{{ icon() }}</div>
+  <div class="stat-card__body">
+    <span class="stat-card__label">{{ label() }}</span>
+    <strong class="stat-card__value">{{ value() }}</strong>
+    @if (subtitle()) {
+      <small class="stat-card__sub">{{ subtitle() }}</small>
+    }
+  </div>
+</div>

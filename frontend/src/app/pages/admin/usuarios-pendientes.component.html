@@ -1,0 +1,38 @@
+<app-page-header
+  title="Cuentas técnicas pendientes"
+  subtitle="Apruebe o rechace solicitudes de registro"
+/>
+
+<div class="card table-wrap">
+  @if (loading()) {
+    <p class="loading">Cargando...</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>DNI</th>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Solicitud</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of items(); track u.id) {
+          <tr>
+            <td>{{ u.dni || '—' }}</td>
+            <td>{{ u.nombre }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.created_at | date:'short' }}</td>
+            <td class="actions">
+              <button type="button" class="btn btn--primary btn--sm" (click)="aprobar(u)">Aprobar</button>
+              <button type="button" class="btn btn--danger btn--sm" (click)="rechazar(u)">Rechazar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="empty">No hay solicitudes pendientes</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

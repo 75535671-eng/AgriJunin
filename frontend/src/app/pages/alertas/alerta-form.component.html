@@ -1,0 +1,95 @@
+<h2>{{ isEdit() ? 'Editar' : 'Nueva' }} alerta</h2>
+
+@if (error()) {
+  <p class="form-error">{{ error() }}</p>
+}
+
+<form (ngSubmit)="save()" class="card form-card">
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Tipo *</label>
+      <select [formField]="alertaForm.tipo">
+        <option value="humedad">Humedad</option>
+        <option value="temperatura">Temperatura</option>
+        <option value="ph">pH</option>
+        <option value="pluvia">Lluvia</option>
+        <option value="sensor">Sensor</option>
+        <option value="produccion">Producción</option>
+        <option value="sistema">Sistema</option>
+      </select>
+      @if (showFieldError(alertaForm.tipo)) {
+        <span class="error-msg">{{ firstFieldError(alertaForm.tipo) }}</span>
+      }
+    </div>
+    <div class="form-group">
+      <label>Nivel *</label>
+      <select [formField]="alertaForm.nivel">
+        <option value="info">Info</option>
+        <option value="advertencia">Advertencia</option>
+        <option value="critica">Crítica</option>
+      </select>
+      @if (showFieldError(alertaForm.nivel)) {
+        <span class="error-msg">{{ firstFieldError(alertaForm.nivel) }}</span>
+      }
+    </div>
+
+    @if (needsRegistro()) {
+      <div class="form-group full">
+        <label>Registro agrícola *</label>
+        <select [formField]="alertaForm.registro_id">
+          <option value="">— Seleccione —</option>
+          @for (r of lookup.registros(); track r.id) {
+            <option [value]="r.id">#{{ r.id }} — {{ r.lote_nombre }} ({{ r.fecha_registro | date:'short' }})</option>
+          }
+        </select>
+        @if (showFieldError(alertaForm.registro_id)) {
+          <span class="error-msg">{{ firstFieldError(alertaForm.registro_id) }}</span>
+        }
+      </div>
+    }
+
+    @if (needsSensor()) {
+      <div class="form-group full">
+        <label>Sensor *</label>
+        <select [formField]="alertaForm.sensor_id">
+          <option value="">— Seleccione —</option>
+          @for (s of lookup.sensores(); track s.id) {
+            <option [value]="s.id">{{ s.codigo_sensor }} — {{ s.nombre }} ({{ s.lote_nombre || 'lote' }})</option>
+          }
+        </select>
+        @if (showFieldError(alertaForm.sensor_id)) {
+          <span class="error-msg">{{ firstFieldError(alertaForm.sensor_id) }}</span>
+        }
+      </div>
+    }
+
+    @if (needsSistema()) {
+      <p class="hint full">Las alertas de tipo sistema no requieren lote; el contexto se deriva del registro o sensor (3FN).</p>
+    }
+
+    <div class="form-group full">
+      <label>Título *</label>
+      <input [formField]="alertaForm.titulo" />
+      @if (showFieldError(alertaForm.titulo)) {
+        <span class="error-msg">{{ firstFieldError(alertaForm.titulo) }}</span>
+      }
+    </div>
+    <div class="form-group full">
+      <label>Mensaje *</label>
+      <textarea [formField]="alertaForm.mensaje" rows="3"></textarea>
+      @if (showFieldError(alertaForm.mensaje)) {
+        <span class="error-msg">{{ firstFieldError(alertaForm.mensaje) }}</span>
+      }
+    </div>
+    <div class="form-group">
+      <label><input type="checkbox" [formField]="alertaForm.leida" /> Leída</label>
+    </div>
+    <div class="form-group">
+      <label><input type="checkbox" [formField]="alertaForm.resuelta" /> Resuelta</label>
+    </div>
+  </div>
+  <div class="form-actions">
+    <a routerLink="/alertas" class="btn btn--outline">Cancelar</a>
+    <button type="submit" class="btn btn--primary" [disabled]="loading()">Guardar</button>
+  </div>
+</form>

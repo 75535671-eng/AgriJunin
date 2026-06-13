@@ -1,0 +1,92 @@
+<app-relation-banner
+  hint="Cada fila es un LOTE: pertenece a un agricultor y tiene un cultivo asignado. Desde aquí se vinculan sensores y registros."
+/>
+
+<app-page-header
+  title="Lotes agrícolas"
+  [subtitle]="subtitle()"
+  [showAction]="auth.canManageLotes()"
+  actionLabel="Nuevo lote"
+  (actionClick)="router.navigate(['/lotes/nuevo'])"
+/>
+
+@if (auth.canEdit()) {
+  <div class="filtros card">
+    <button type="button" class="btn btn--sm" [class.btn--outline]="filtro() !== 'todos'" [class.btn--primary]="filtro() === 'todos'" (click)="setFiltro('todos')">Todos</button>
+    <button type="button" class="btn btn--sm" [class.btn--outline]="filtro() !== 'pendientes'" [class.btn--primary]="filtro() === 'pendientes'" (click)="setFiltro('pendientes')">Pendientes de aprobar</button>
+    <button type="button" class="btn btn--sm" [class.btn--outline]="filtro() !== 'aprobados'" [class.btn--primary]="filtro() === 'aprobados'" (click)="setFiltro('aprobados')">Aprobados</button>
+  </div>
+}
+
+@if (filterLabel()) {
+  <div class="filter-chip card">
+    <span>Filtro activo: {{ filterLabel() }}</span>
+    <button type="button" class="btn btn--outline btn--sm" (click)="clearFilters()">Ver todos los lotes</button>
+  </div>
+}
+
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        @if (!auth.isAgricultor()) { <th>Agricultor</th> }
+        <th>Cultivo</th>
+        <th>Área</th>
+        <th>Parcela</th>
+        <th>Aprobación</th>
+        <th>Relacionado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (l of store.items(); track l.id) {
+        <tr [class.row-pendiente]="l.estado_aprobacion === 'pendiente'">
+          <td><code>{{ l.codigo_lote }}</code></td>
+          <td>{{ l.nombre }}</td>
+          @if (!auth.isAgricultor()) {
+            <td>
+              <a [routerLink]="['/lotes']" [queryParams]="{ agricultor_id: l.agricultor_id }" class="link">
+                {{ l.agricultor_nombre || (l.agricultor_nombres + ' ' + l.agricultor_apellidos) }}
+              </a>
+            </td>
+          }
+          <td>
+            <a [routerLink]="['/lotes']" [queryParams]="{ cultivo_id: l.cultivo_id }" class="link">
+              {{ l.cultivo_nombre || '—' }}
+            </a>
+          </td>
+          <td>{{ l.area_hectareas }} ha</td>
+          <td><span class="badge badge--info">{{ l.estado }}</span></td>
+          <td>
+            <span class="badge" [class]="aprobacionClass(l)">{{ aprobacionLabel(l) }}</span>
+            @if (l.estado_aprobacion === 'rechazado' && l.motivo_rechazo) {
+              <small class="motivo">{{ l.motivo_rechazo }}</small>
+            }
+          </td>
+          <td class="rel-links">
+            @if (l.estado_aprobacion === 'aprobado') {
+              <a [routerLink]="['/sensores']" [queryParams]="{ lote_id: l.id }" class="btn btn--outline btn--sm">Sensores</a>
+              <a [routerLink]="['/registros']" [queryParams]="{ lote_id: l.id }" class="btn btn--outline btn--sm">Registros</a>
+            }
+          </td>
+          <td class="actions">
+            @if (l.estado_aprobacion === 'pendiente' && auth.canEdit()) {
+              <button type="button" class="btn btn--primary btn--sm" (click)="aprobar(l)">Aprobar</button>
+              <button type="button" class="btn btn--danger btn--sm" (click)="rechazar(l)">Rechazar</button>
+            }
+            @if (auth.canManageLotes() && (l.estado_aprobacion !== 'rechazado' || auth.canEdit())) {
+              <a [routerLink]="['/lotes', l.id, 'editar']" class="btn btn--outline btn--sm">Editar</a>
+            }
+            @if (auth.isAdmin() && l.estado_aprobacion === 'aprobado') {
+              <button class="btn btn--danger btn--sm" (click)="del(l.id!)">Eliminar</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr><td [attr.colspan]="auth.isAgricultor() ? 8 : 9" class="empty">Sin lotes</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

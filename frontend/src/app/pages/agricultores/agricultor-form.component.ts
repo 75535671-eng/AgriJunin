@@ -1,17 +1,17 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, min, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AgricultoresStore } from '../../services/entity.service';
+import { firstFieldError, showFieldError, touchFields } from '../../shared/utils/form-signals';
 
 @Component({
   selector: 'app-agricultor-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [FormField, RouterLink],
   providers: [AgricultoresStore],
   templateUrl: './agricultor-form.component.html',
-  styleUrl: './crud-list.scss',
+  styleUrls: ['./crud-list.scss', '../../shared/styles/form-layout.scss'],
 })
 export class AgricultorFormComponent implements OnInit {
-  private readonly fb = inject(FormBuilder);
   private readonly store = inject(AgricultoresStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -19,23 +19,32 @@ export class AgricultorFormComponent implements OnInit {
   protected readonly isEdit = signal(false);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly profileNombre = signal('');
+  protected readonly profileDni = signal('');
+  protected readonly profileEmail = signal('');
+  protected readonly showFieldError = showFieldError;
+  protected readonly firstFieldError = firstFieldError;
   private id?: number;
 
-  form = this.fb.nonNullable.group({
-    usuario_id: [1, [Validators.required, Validators.min(1)]],
-    dni: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
-    nombres: ['', [Validators.required, Validators.minLength(2)]],
-    apellidos: ['', [Validators.required, Validators.minLength(2)]],
-    telefono: [''],
-    email_contacto: ['', Validators.email],
-    direccion: [''],
-    distrito: ['Junín', Validators.required],
-    provincia: ['Junín'],
-    departamento: ['Junín'],
-    hectareas_totales: [0, [Validators.min(0)]],
-    fecha_registro: [new Date().toISOString().slice(0, 10), Validators.required],
-    activo: [true],
-    notas: [''],
+  private readonly agricultorModel = signal({
+    usuario_id: 1,
+    telefono: '',
+    direccion: '',
+    distrito: 'Junín',
+    provincia: 'Junín',
+    departamento: 'Junín',
+    hectareas_totales: 0,
+    fecha_registro: new Date().toISOString().slice(0, 10),
+    activo: true,
+    notas: '',
+  });
+
+  protected readonly agricultorForm = form(this.agricultorModel, (path) => {
+    required(path.usuario_id, { message: 'ID de usuario requerido' });
+    min(path.usuario_id, 1, { message: 'ID de usuario inválido' });
+    required(path.distrito, { message: 'Distrito requerido' });
+    min(path.hectareas_totales, 0, { message: 'No puede ser negativo' });
+    required(path.fecha_registro, { message: 'Fecha requerida' });
   });
 
   ngOnInit(): void {
@@ -46,10 +55,20 @@ export class AgricultorFormComponent implements OnInit {
       this.store.getById(this.id).subscribe({
         next: (res) => {
           const d = res.data;
-          this.form.patchValue({
-            ...d,
+          this.profileNombre.set(d.usuario_nombre || `${d.nombres || ''} ${d.apellidos || ''}`.trim());
+          this.profileDni.set(d.dni || '');
+          this.profileEmail.set(d.usuario_email || d.email_contacto || '');
+          this.agricultorModel.set({
+            usuario_id: d.usuario_id,
+            telefono: d.telefono || '',
+            direccion: d.direccion || '',
+            distrito: d.distrito,
+            provincia: d.provincia || 'Junín',
+            departamento: d.departamento || 'Junín',
+            hectareas_totales: d.hectareas_totales ?? 0,
             fecha_registro: String(d.fecha_registro).slice(0, 10),
             activo: !!d.activo,
+            notas: d.notas || '',
           });
         },
       });
@@ -57,12 +76,17 @@ export class AgricultorFormComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+    touchFields(
+      this.agricultorForm.usuario_id,
+      this.agricultorForm.distrito,
+      this.agricultorForm.hectareas_totales,
+      this.agricultorForm.fecha_registro
+    );
+    if (this.agricultorForm().invalid()) {
       return;
     }
     this.loading.set(true);
-    const data = this.form.getRawValue();
+    const data = this.agricultorModel();
     const req = this.isEdit() && this.id
       ? this.store.update(this.id, data)
       : this.store.create(data);
@@ -75,10 +99,5 @@ export class AgricultorFormComponent implements OnInit {
       },
       complete: () => this.loading.set(false),
     });
-  }
-
-  isInvalid(field: string): boolean {
-    const c = this.form.get(field);
-    return !!(c && c.invalid && (c.dirty || c.touched));
   }
 }

@@ -1,48 +1,65 @@
 <div class="form-page">
   <h2>{{ isEdit() ? 'Editar' : 'Nuevo' }} agricultor</h2>
+  <p class="hint">Los datos personales (nombre, DNI, email) viven en la tabla <strong>usuarios</strong> — 3FN.</p>
   @if (error()) { <div class="alert alert--error">{{ error() }}</div> }
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="card form-card">
+  @if (isEdit() && profileNombre()) {
+    <div class="card profile-card">
+      <strong>{{ profileNombre() }}</strong>
+      @if (profileDni()) { <span> · DNI {{ profileDni() }}</span> }
+      @if (profileEmail()) { <span> · {{ profileEmail() }}</span> }
+    </div>
+  }
+
+  <form (ngSubmit)="submit()" class="card form-card">
     <div class="form-grid form-grid--fields">
       <div class="form-group">
         <label>ID Usuario *</label>
-        <input type="number" formControlName="usuario_id" [class.invalid]="isInvalid('usuario_id')" />
-      </div>
-      <div class="form-group">
-        <label>DNI (8 dígitos) *</label>
-        <input formControlName="dni" [class.invalid]="isInvalid('dni')" />
-      </div>
-      <div class="form-group">
-        <label>Nombres *</label>
-        <input formControlName="nombres" [class.invalid]="isInvalid('nombres')" />
-      </div>
-      <div class="form-group">
-        <label>Apellidos *</label>
-        <input formControlName="apellidos" [class.invalid]="isInvalid('apellidos')" />
+        <input type="number" [formField]="agricultorForm.usuario_id" />
+        @if (showFieldError(agricultorForm.usuario_id)) {
+          <span class="error-msg">{{ firstFieldError(agricultorForm.usuario_id) }}</span>
+        }
       </div>
       <div class="form-group">
         <label>Teléfono</label>
-        <input formControlName="telefono" />
-      </div>
-      <div class="form-group">
-        <label>Email contacto</label>
-        <input formControlName="email_contacto" />
+        <input [formField]="agricultorForm.telefono" />
       </div>
       <div class="form-group">
         <label>Distrito *</label>
-        <input formControlName="distrito" />
+        <input [formField]="agricultorForm.distrito" />
+        @if (showFieldError(agricultorForm.distrito)) {
+          <span class="error-msg">{{ firstFieldError(agricultorForm.distrito) }}</span>
+        }
+      </div>
+      <div class="form-group">
+        <label>Provincia</label>
+        <input [formField]="agricultorForm.provincia" />
+      </div>
+      <div class="form-group">
+        <label>Departamento</label>
+        <input [formField]="agricultorForm.departamento" />
       </div>
       <div class="form-group">
         <label>Hectáreas totales</label>
-        <input type="number" step="0.01" formControlName="hectareas_totales" />
+        <input type="number" step="0.01" [formField]="agricultorForm.hectareas_totales" />
+        @if (showFieldError(agricultorForm.hectareas_totales)) {
+          <span class="error-msg">{{ firstFieldError(agricultorForm.hectareas_totales) }}</span>
+        }
       </div>
       <div class="form-group">
         <label>Fecha registro *</label>
-        <input type="date" formControlName="fecha_registro" />
+        <input type="date" [formField]="agricultorForm.fecha_registro" />
+        @if (showFieldError(agricultorForm.fecha_registro)) {
+          <span class="error-msg">{{ firstFieldError(agricultorForm.fecha_registro) }}</span>
+        }
       </div>
       <div class="form-group full">
         <label>Dirección</label>
-        <textarea formControlName="direccion" rows="2"></textarea>
+        <textarea [formField]="agricultorForm.direccion" rows="2"></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Notas</label>
+        <textarea [formField]="agricultorForm.notas" rows="2"></textarea>
       </div>
     </div>
     <div class="form-actions">

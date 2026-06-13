@@ -1,0 +1,34 @@
+<section class="map-section card">
+  <div class="map-section__header">
+    <div>
+      <h3>📍 Ubicación del lote</h3>
+      <p>Haga clic en el mapa o arrastre el marcador. Se muestra la ruta desde Huancayo (Junín).</p>
+    </div>
+    <button type="button" class="btn btn--outline btn--sm" (click)="usarMiUbicacion()" [disabled]="loading()">
+      Mi ubicación
+    </button>
+  </div>
+
+  @if (mapError()) {
+    <div class="map-alert map-alert--error">{{ mapError() }}</div>
+  }
+
+  <div class="map-wrap">
+    @if (loading()) {
+      <p class="map-loading">Cargando mapa...</p>
+    }
+    <div #mapCanvas class="map-canvas" [class.map-canvas--hidden]="loading()"></div>
+  </div>
+
+  @if (coordsLabel()) {
+    <p class="coords"><strong>Coordenadas:</strong> {{ coordsLabel() }}</p>
+  }
+
+  @if (routeInfo(); as r) {
+    <div class="route-info">
+      <p><strong>Desde:</strong> {{ r.origen_referencia }} ({{ r.origen.direccion }})</p>
+      <p><strong>Hasta su lote:</strong> {{ r.destino.direccion }}</p>
+      <p class="route-stats">🚗 {{ r.distancia }} · ⏱ {{ r.duracion }}</p>
+    </div>
+  }
+</section>

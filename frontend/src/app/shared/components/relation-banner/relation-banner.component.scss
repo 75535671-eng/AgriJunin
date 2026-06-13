@@ -1,0 +1,55 @@
+.relation-banner {
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #f0f7f4 0%, #e8f5e9 100%);
+  border-left: 4px solid var(--primary, #2d6a4f);
+}
+
+.relation-banner__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-dark, #1b4332);
+}
+
+.relation-banner__chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.relation-banner__node {
+  color: var(--primary-dark);
+  font-weight: 500;
+  text-decoration: none;
+
+  &--key {
+    background: var(--primary, #2d6a4f);
+    color: white;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+  }
+
+  &:hover:not(.relation-banner__node--key) {
+    text-decoration: underline;
+  }
+}
+
+.relation-banner__arrow {
+  opacity: 0.5;
+  font-size: 0.75rem;
+}
+
+.relation-banner__hint {
+  font-size: 0.65rem;
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.relation-banner__desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, #666);
+}

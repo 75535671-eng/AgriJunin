@@ -1,0 +1,10 @@
+{
+  "name": "agri-junin",
+  "private": true,
+  "scripts": {
+    "seed": "python backend/database/seed_runner.py",
+    "backend": "cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 3000",
+    "frontend": "npm start --prefix frontend",
+    "start": "powershell -ExecutionPolicy Bypass -File ./start.ps1"
+  }
+}
