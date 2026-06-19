@@ -152,9 +152,20 @@ def list_lotes(query: dict[str, Any], scope: Scope, user: UserContext | None) ->
     if query.get("agricultor_id"):
         sql += " AND l.agricultor_id = %s"
         params.append(query["agricultor_id"])
+    if query.get("cultivo_id"):
+        sql += " AND l.cultivo_id = %s"
+        params.append(query["cultivo_id"])
+    if query.get("pendientes"):
+        sql += " AND COALESCE(sol.estado,'aprobado') = 'pendiente'"
+    elif query.get("solo_aprobados"):
+        sql += " AND COALESCE(sol.estado,'aprobado') = 'aprobado'"
+    if query.get("search"):
+        term = f"%{query['search']}%"
+        sql += " AND (l.nombre LIKE %s OR l.codigo_lote LIKE %s OR u.nombre LIKE %s OR c.nombre LIKE %s)"
+        params.extend([term, term, term, term])
     total_row = fetch_one(f"SELECT COUNT(*) AS total FROM ({sql}) t", params)
     total = int(total_row["total"]) if total_row else 0
-    sql += " ORDER BY l.created_at DESC LIMIT %s OFFSET %s"
+    sql += " ORDER BY CASE COALESCE(sol.estado,'aprobado') WHEN 'pendiente' THEN 0 ELSE 1 END, l.created_at DESC LIMIT %s OFFSET %s"
     params.extend([limit, (page - 1) * limit])
     return {"data": fetch_all(sql, params), "pagination": paginate(page, limit, total)}
 
@@ -432,6 +443,10 @@ def list_alertas(query: dict[str, Any], scope: Scope) -> dict[str, Any]:
     if query.get("tipo"):
         sql += " AND al.tipo = %s"
         params.append(query["tipo"])
+    if query.get("nombre"):
+        term = f"%{query['nombre']}%"
+        sql += " AND (al.titulo LIKE %s OR al.mensaje LIKE %s OR u.nombre LIKE %s OR l.nombre LIKE %s)"
+        params.extend([term, term, term, term])
     if query.get("search"):
         term = f"%{query['search']}%"
         sql += " AND (al.titulo LIKE %s OR al.mensaje LIKE %s OR l.codigo_lote LIKE %s OR l.nombre LIKE %s)"

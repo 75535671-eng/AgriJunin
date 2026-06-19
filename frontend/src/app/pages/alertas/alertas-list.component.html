@@ -15,6 +15,15 @@
       />
     </div>
     <div class="form-group filters-bar__field">
+      <label>Nombre</label>
+      <input
+        type="search"
+        placeholder="Título, agricultor o lote"
+        [ngModel]="nombre()"
+        (ngModelChange)="onNombreChange($event)"
+      />
+    </div>
+    <div class="form-group filters-bar__field">
       <label>Nivel</label>
       <select [ngModel]="nivel()" (ngModelChange)="onNivelChange($event)">
         <option value="">Todos</option>
@@ -35,7 +44,7 @@
         <option value="sistema">Sistema</option>
       </select>
     </div>
-    @if (codigoLote() || nivel() || tipo()) {
+    @if (codigoLote() || nombre() || nivel() || tipo()) {
       <button type="button" class="btn btn--outline btn--sm filters-bar__clear" (click)="clearFilters()">
         Limpiar filtros
       </button>

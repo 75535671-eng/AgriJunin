@@ -20,9 +20,18 @@ async def get_lotes(
     user: Annotated[UserContext, Depends(get_current_user)],
     pagination: Annotated[PaginationQuery, Depends()],
     agricultor_id: int | None = Query(default=None),
+    cultivo_id: int | None = Query(default=None),
+    pendientes: str | None = Query(default=None),
+    solo_aprobados: str | None = Query(default=None),
 ):
     query = pagination.model_dump()
     query["agricultor_id"] = agricultor_id
+    if cultivo_id:
+        query["cultivo_id"] = cultivo_id
+    if pendientes:
+        query["pendientes"] = pendientes
+    if solo_aprobados:
+        query["solo_aprobados"] = solo_aprobados
     r = domain_service.list_lotes(query, scope, user)
     return paginated(r["data"], r["pagination"], "Lotes obtenidos")
 

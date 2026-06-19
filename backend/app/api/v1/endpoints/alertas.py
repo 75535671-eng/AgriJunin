@@ -20,6 +20,7 @@ async def get_alertas(
     codigo_lote: str | None = Query(default=None),
     nivel: str | None = Query(default=None),
     tipo: str | None = Query(default=None),
+    nombre: str | None = Query(default=None),
 ):
     query = pagination.model_dump()
     if codigo_lote:
@@ -28,6 +29,8 @@ async def get_alertas(
         query["nivel"] = nivel.strip()
     if tipo:
         query["tipo"] = tipo.strip()
+    if nombre:
+        query["nombre"] = nombre.strip()
     r = domain_service.list_alertas(query, scope)
     return paginated(r["data"], r["pagination"], "Alertas obtenidas")
 

@@ -20,6 +20,7 @@ export class AlertasListComponent implements OnInit {
   protected readonly router = inject(Router);
 
   protected readonly codigoLote = signal('');
+  protected readonly nombre = signal('');
   protected readonly nivel = signal('');
   protected readonly tipo = signal('');
 
@@ -30,6 +31,11 @@ export class AlertasListComponent implements OnInit {
 
   onCodigoLoteChange(value: string): void {
     this.codigoLote.set(value);
+    this.applyFilters();
+  }
+
+  onNombreChange(value: string): void {
+    this.nombre.set(value);
     this.applyFilters();
   }
 
@@ -45,6 +51,7 @@ export class AlertasListComponent implements OnInit {
 
   clearFilters(): void {
     this.codigoLote.set('');
+    this.nombre.set('');
     this.nivel.set('');
     this.tipo.set('');
     this.applyFilters();
@@ -53,11 +60,13 @@ export class AlertasListComponent implements OnInit {
   private applyFilters(): void {
     const filters: Record<string, string> = {};
     const codigo = this.codigoLote().trim();
+    const nombre = this.nombre().trim();
     if (codigo) filters['codigo_lote'] = codigo;
+    if (nombre) filters['nombre'] = nombre;
     if (this.nivel()) filters['nivel'] = this.nivel();
     if (this.tipo()) filters['tipo'] = this.tipo();
     this.store.setFilters(filters);
-    this.store.refresh();
+    this.store.setPage(1);
   }
 
   del(id: number): void {

@@ -59,9 +59,9 @@ export class LotesListComponent implements OnInit {
     if (this.agricultorFilter()) f['agricultor_id'] = this.agricultorFilter()!;
     if (this.cultivoFilter()) f['cultivo_id'] = this.cultivoFilter()!;
     if (this.filtro() === 'pendientes') f['pendientes'] = '1';
-    if (this.filtro() === 'aprobados') f['solo_aprobados'] = '1';
+    else if (this.filtro() === 'aprobados') f['solo_aprobados'] = '1';
     this.store.setFilters(f);
-    this.store.refresh();
+    this.store.setPage(1);
   }
 
   clearFilters(): void {
