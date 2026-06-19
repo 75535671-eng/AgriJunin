@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { MapsService } from '../../../services/maps.service';
 import { loadGoogleMaps } from '../../../core/utils/google-maps-loader';
+import { decodePolyline, loadLeaflet } from '../../../core/utils/leaflet-map-loader';
 import { MapsDirections } from '../../../models';
 
 export interface LoteUbicacion {
@@ -18,6 +19,8 @@ export interface LoteUbicacion {
   longitud: number;
   ubicacion: string;
 }
+
+type MapEngine = 'google' | 'leaflet';
 
 @Component({
   selector: 'app-lote-map-picker',
@@ -39,9 +42,13 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
   protected readonly routeInfo = signal<MapsDirections | null>(null);
   protected readonly coordsLabel = signal('');
 
+  private mapEngine: MapEngine = 'google';
   private map?: google.maps.Map;
   private marker?: google.maps.Marker;
   private routeLine?: google.maps.Polyline;
+  private leafletMap?: any;
+  private leafletMarker?: any;
+  private leafletRoute?: any;
   private centro = { lat: -12.06513, lng: -75.20486 };
 
   ngOnInit(): void {
@@ -52,24 +59,25 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
           this.centro = { lat: centro.lat, lng: centro.lng };
         }
         const apiKey = res.data.apiKey;
-        if (!apiKey) {
-          this.loading.set(false);
-          this.mapError.set('Google Maps API key no configurada en el servidor.');
+        const provider = res.data.provider;
+        if (!apiKey || provider === 'osm') {
+          this.startLeaflet();
           return;
         }
         loadGoogleMaps(apiKey)
-          .then(() => this.initMap())
-          .catch(() => this.mapError.set('No se pudo cargar el mapa. Verifique GOOGLE_MAPS_API_KEY.'));
+          .then(() => {
+            this.mapEngine = 'google';
+            this.initGoogleMap();
+          })
+          .catch(() => this.startLeaflet());
       },
-      error: (err) => {
-        this.loading.set(false);
-        this.mapError.set(err?.error?.message || 'Mapas no disponibles en el servidor');
-      },
+      error: () => this.startLeaflet(),
     });
   }
 
   ngOnDestroy(): void {
     this.routeLine?.setMap(null);
+    this.leafletMap?.remove();
   }
 
   usarMiUbicacion(): void {
@@ -83,7 +91,16 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
     );
   }
 
-  private initMap(): void {
+  private startLeaflet(): void {
+    loadLeaflet()
+      .then(() => {
+        this.mapEngine = 'leaflet';
+        this.initLeafletMap();
+      })
+      .catch(() => this.mapError.set('No se pudo cargar el mapa (OpenStreetMap).'));
+  }
+
+  private initGoogleMap(): void {
     const el = this.mapEl()?.nativeElement;
     if (!el || !window.google?.maps) return;
 
@@ -115,6 +132,37 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
       if (ll) this.setLocation(ll.lat(), ll.lng());
     });
 
+    this.finishMapInit(lat, lng);
+  }
+
+  private initLeafletMap(): void {
+    const el = this.mapEl()?.nativeElement;
+    const L = window.L;
+    if (!el || !L) return;
+
+    const lat = this.latitudInicial() ?? this.centro.lat;
+    const lng = this.longitudInicial() ?? this.centro.lng;
+
+    this.leafletMap = L.map(el).setView([lat, lng], this.latitudInicial() != null ? 14 : 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19,
+    }).addTo(this.leafletMap);
+
+    this.leafletMarker = L.marker([lat, lng], { draggable: true }).addTo(this.leafletMap);
+    this.leafletMarker.on('dragend', () => {
+      const pos = this.leafletMarker?.getLatLng();
+      if (pos) this.setLocation(pos.lat, pos.lng);
+    });
+
+    this.leafletMap.on('click', (e: { latlng: { lat: number; lng: number } }) => {
+      this.setLocation(e.latlng.lat, e.latlng.lng);
+    });
+
+    this.finishMapInit(lat, lng);
+  }
+
+  private finishMapInit(lat: number, lng: number): void {
     this.loading.set(false);
     if (this.latitudInicial() != null && this.longitudInicial() != null) {
       this.setLocation(this.latitudInicial()!, this.longitudInicial()!, this.ubicacionInicial(), false);
@@ -122,8 +170,14 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
   }
 
   private setLocation(lat: number, lng: number, addressHint = '', emit = true): void {
-    this.marker?.setPosition({ lat, lng });
-    this.map?.setCenter({ lat, lng });
+    if (this.mapEngine === 'google') {
+      this.marker?.setPosition({ lat, lng });
+      this.map?.setCenter({ lat, lng });
+    } else {
+      this.leafletMarker?.setLatLng([lat, lng]);
+      this.leafletMap?.setView([lat, lng], this.leafletMap?.getZoom?.() ?? 14);
+    }
+
     this.coordsLabel.set(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
     this.mapError.set(null);
 
@@ -143,22 +197,35 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.routeInfo.set(res.data);
         const poly = res.data.polyline;
-        if (!poly || !this.map || !window.google?.maps?.geometry) return;
+        if (!poly) return;
 
-        this.routeLine?.setMap(null);
-        const path = google.maps.geometry.encoding.decodePath(poly);
-        this.routeLine = new google.maps.Polyline({
-          path,
-          geodesic: true,
-          strokeColor: '#2e7d32',
-          strokeOpacity: 0.85,
-          strokeWeight: 4,
-          map: this.map,
-        });
+        if (this.mapEngine === 'google' && this.map && window.google?.maps?.geometry) {
+          this.routeLine?.setMap(null);
+          const path = google.maps.geometry.encoding.decodePath(poly);
+          this.routeLine = new google.maps.Polyline({
+            path,
+            geodesic: true,
+            strokeColor: '#2e7d32',
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+            map: this.map,
+          });
+          const bounds = new google.maps.LatLngBounds();
+          path.forEach((p) => bounds.extend(p));
+          this.map.fitBounds(bounds);
+          return;
+        }
 
-        const bounds = new google.maps.LatLngBounds();
-        path.forEach((p) => bounds.extend(p));
-        this.map.fitBounds(bounds);
+        if (this.mapEngine === 'leaflet' && this.leafletMap && window.L) {
+          const path = decodePolyline(poly).map((p) => [p.lat, p.lng] as [number, number]);
+          this.leafletRoute?.remove();
+          this.leafletRoute = window.L.polyline(path, {
+            color: '#2e7d32',
+            weight: 4,
+            opacity: 0.85,
+          }).addTo(this.leafletMap);
+          this.leafletMap.fitBounds(this.leafletRoute.getBounds(), { padding: [24, 24] });
+        }
       },
     });
   }

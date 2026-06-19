@@ -249,6 +249,7 @@ export interface ClimaHuancayo {
 
 export interface MapsConfig {
   apiKey: string;
+  provider?: 'google' | 'osm';
   centro: { lat: number; lng: number; etiqueta: string };
   origenRuta: string;
 }
