@@ -40,8 +40,8 @@
       <tbody>
         @for (item of store.items(); track item.id) {
           <tr>
-            <td>{{ item.dni }}</td>
-            <td>{{ item.nombres }} {{ item.apellidos }}</td>
+            <td>{{ item.dni || item.usuario_dni }}</td>
+            <td>{{ item.agricultor_nombre || item.usuario_nombre || (item.nombres + ' ' + item.apellidos) }}</td>
             <td>{{ item.distrito }}</td>
             <td>{{ item.hectareas_totales }} ha</td>
             <td>{{ item.fecha_registro | date:'dd/MM/yyyy' }}</td>

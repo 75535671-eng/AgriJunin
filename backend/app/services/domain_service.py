@@ -503,26 +503,90 @@ def delete_alerta(id_: int) -> bool:
     return domain_repository.delete_row("alertas", id_)
 
 
+def _split_nombre(nombre: str | None) -> tuple[str, str]:
+    parts = (nombre or "").strip().split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])
+
+
+def _normalize_agricultor(row: dict[str, Any]) -> dict[str, Any]:
+    nombre = row.get("usuario_nombre") or ""
+    nombres, apellidos = _split_nombre(nombre)
+    row["dni"] = row.get("usuario_dni")
+    row["nombres"] = nombres
+    row["apellidos"] = apellidos
+    row["agricultor_nombre"] = nombre
+    row["lotes_cultivos"] = row.get("lotes_cultivos") or []
+    row["total_lotes"] = int(row.get("total_lotes") or len(row["lotes_cultivos"]))
+    return row
+
+
+def _attach_lotes_cultivos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not rows:
+        return rows
+    ids = [int(r["id"]) for r in rows]
+    placeholders = ", ".join(["%s"] * len(ids))
+    lotes = fetch_all(
+        f"""
+        SELECT l.agricultor_id, l.id AS lote_id, l.codigo_lote, l.nombre AS lote_nombre,
+               c.id AS cultivo_id, c.nombre AS cultivo_nombre, tc.codigo AS cultivo_tipo,
+               l.estado, l.area_hectareas, l.fecha_siembra
+        FROM lotes l
+        LEFT JOIN cultivos c ON l.cultivo_id = c.id
+        LEFT JOIN tipos_cultivo tc ON c.tipo_id = tc.id
+        WHERE l.agricultor_id IN ({placeholders}) AND l.activo = 1
+        ORDER BY l.codigo_lote
+        """,
+        ids,
+    )
+    by_ag: dict[int, list[dict[str, Any]]] = {}
+    for lot in lotes:
+        ag_id = int(lot["agricultor_id"])
+        by_ag.setdefault(ag_id, []).append(
+            {k: v for k, v in lot.items() if k != "agricultor_id"}
+        )
+    for row in rows:
+        ag_id = int(row["id"])
+        row["lotes_cultivos"] = by_ag.get(ag_id, [])
+        row["total_lotes"] = len(row["lotes_cultivos"])
+        cultivo_names = sorted({lc.get("cultivo_nombre") for lc in row["lotes_cultivos"] if lc.get("cultivo_nombre")})
+        row["cultivos_en_lotes"] = ", ".join(cultivo_names) if cultivo_names else None
+        row["total_cultivos_distintos"] = len(cultivo_names)
+    return rows
+
+
 def list_agricultores(query: dict[str, Any]) -> dict[str, Any]:
     page, limit = int(query.get("page", 1)), int(query.get("limit", 10))
     sql = """SELECT a.*, u.email AS usuario_email, u.nombre AS usuario_nombre, u.dni AS usuario_dni
              FROM agricultores a INNER JOIN usuarios u ON a.usuario_id = u.id WHERE 1=1"""
     params: list[Any] = []
+    if query.get("search"):
+        term = f"%{query['search']}%"
+        sql += " AND (u.nombre LIKE %s OR u.dni LIKE %s OR a.distrito LIKE %s OR u.email LIKE %s)"
+        params.extend([term, term, term, term])
     total_row = fetch_one(f"SELECT COUNT(*) AS total FROM ({sql}) t", params)
     total = int(total_row["total"]) if total_row else 0
-    sql += " ORDER BY a.created_at DESC LIMIT %s OFFSET %s"
+    sql += " ORDER BY u.nombre ASC LIMIT %s OFFSET %s"
     params.extend([limit, (page - 1) * limit])
-    return {"data": fetch_all(sql, params), "pagination": paginate(page, limit, total)}
+    rows = _attach_lotes_cultivos(fetch_all(sql, params))
+    data = [_normalize_agricultor(row) for row in rows]
+    return {"data": data, "pagination": paginate(page, limit, total)}
 
 
 def get_agricultor(id_: int, scope: Scope) -> dict[str, Any] | None:
     if scope.rol == "agricultor" and scope.agricultor_id != id_:
         return None
-    return fetch_one(
+    row = fetch_one(
         """SELECT a.*, u.email AS usuario_email, u.nombre AS usuario_nombre, u.dni AS usuario_dni
            FROM agricultores a INNER JOIN usuarios u ON a.usuario_id = u.id WHERE a.id = %s""",
         (id_,),
     )
+    if not row:
+        return None
+    return _normalize_agricultor(_attach_lotes_cultivos([row])[0])
 
 
 def create_agricultor(data: dict[str, Any]) -> dict[str, Any]:
