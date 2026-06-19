@@ -259,9 +259,6 @@ CREATE TABLE IF NOT EXISTS alertas (
   CONSTRAINT fk_alertas_sensor
     FOREIGN KEY (sensor_id) REFERENCES sensores(id)
     ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT chk_alertas_origen CHECK (
-    registro_id IS NOT NULL OR sensor_id IS NOT NULL OR tipo = 'sistema'
-  ),
   INDEX idx_alertas_registro (registro_id),
   INDEX idx_alertas_sensor (sensor_id),
   INDEX idx_alertas_nivel (nivel)

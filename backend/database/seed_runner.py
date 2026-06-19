@@ -65,13 +65,26 @@ def run_sql_file(cur: pymysql.cursors.Cursor, filename: str) -> None:
     print(f"[OK] {filename} aplicado")
 
 
+def db_settings() -> dict[str, str | int]:
+    return {
+        "host": os.getenv("DB_HOST") or os.getenv("MYSQLHOST", "localhost"),
+        "port": int(os.getenv("DB_PORT") or os.getenv("MYSQLPORT", "3306")),
+        "user": os.getenv("DB_USER") or os.getenv("MYSQLUSER", "root"),
+        "password": os.getenv("DB_PASSWORD") or os.getenv("MYSQLPASSWORD", ""),
+        "database": os.getenv("DB_NAME")
+        or os.getenv("MYSQLDATABASE")
+        or "agri_junin",
+    }
+
+
 def run() -> None:
-    db_name = os.getenv("DB_NAME", "agri_junin")
+    settings = db_settings()
+    db_name = str(settings["database"])
     conn = pymysql.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", "3306")),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
+        host=str(settings["host"]),
+        port=int(settings["port"]),
+        user=str(settings["user"]),
+        password=str(settings["password"]),
         charset="utf8mb4",
         autocommit=True,
         client_flag=pymysql.constants.CLIENT.MULTI_STATEMENTS,
