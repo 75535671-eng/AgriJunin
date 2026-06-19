@@ -51,6 +51,21 @@ def user_exists_by_dni(dni: str) -> bool:
     return bool(fetch_one("SELECT id FROM usuarios WHERE dni = %s", (dni,)))
 
 
+def user_exists_by_email(email: str) -> bool:
+    return bool(fetch_one("SELECT id FROM usuarios WHERE email = %s", (email,)))
+
+
+def get_user_by_email_or_dni(email: str, dni: str) -> dict[str, Any] | None:
+    return fetch_one(
+        "SELECT id, email, dni, rol_id, estado_cuenta, activo FROM usuarios WHERE email = %s OR dni = %s LIMIT 1",
+        (email, dni),
+    )
+
+
+def has_agricultor_profile(user_id: int) -> bool:
+    return bool(fetch_one("SELECT id FROM agricultores WHERE usuario_id = %s", (user_id,)))
+
+
 def create_user(
     nombre: str,
     email: str,
@@ -71,6 +86,7 @@ def create_user(
 
 
 def ensure_agricultor(usuario_id: int, distrito: str = "Junín") -> None:
+    distrito = (distrito or "Junín").strip() or "Junín"
     existing = fetch_one("SELECT id FROM agricultores WHERE usuario_id = %s", (usuario_id,))
     if existing:
         execute("UPDATE agricultores SET activo = 1 WHERE usuario_id = %s", (usuario_id,))

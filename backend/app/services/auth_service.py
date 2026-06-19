@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import pymysql
+
 from app.core.responses import http_error
 from app.core.security import create_token, hash_password, is_bcrypt_hash, verify_password
 from app.repositories import auth_repository as repo
@@ -12,6 +14,20 @@ EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 def _normalize_email(email: str) -> str:
     return email.strip().lower()
+
+
+def _build_register_response(user_id: int, rol_codigo: str, estado: str) -> dict[str, Any]:
+    profile = repo.get_profile(user_id)
+    if not profile:
+        raise http_error("No se pudo completar el registro", 500)
+    es_tecnico = rol_codigo == "tecnico"
+    if es_tecnico:
+        return {"user": profile, "token": None, "pendienteAprobacion": True}
+    return {
+        "user": profile,
+        "token": create_token(profile),
+        "pendienteAprobacion": False,
+    }
 
 
 def login(login_id: str, password: str) -> dict[str, Any] | None:
@@ -37,8 +53,6 @@ def register(data: dict[str, Any]) -> dict[str, Any]:
     dni = str(data.get("dni", "")).strip()
     if not re.fullmatch(r"\d{8}", dni):
         raise http_error("DNI inválido", 400)
-    if repo.user_exists_by_dni(dni):
-        raise http_error("Ya existe una cuenta con este DNI", 409)
 
     email = _normalize_email(data["email"])
     nombre = data.get("nombre") or f"{data.get('nombres', '')} {data.get('apellidos', '')}".strip()
@@ -47,16 +61,40 @@ def register(data: dict[str, Any]) -> dict[str, Any]:
     es_tecnico = rol_codigo == "tecnico"
     estado = "pendiente" if es_tecnico else "aprobada"
     activo = 0 if es_tecnico else 1
+    distrito = data.get("distrito") or "Junín"
 
-    user_id = repo.create_user(nombre, email, dni, hash_password(data["password"]), rol_id, activo, estado)
-    if rol_codigo == "agricultor":
-        repo.ensure_agricultor(user_id, data.get("distrito", "Junín"))
+    existing = repo.get_user_by_email_or_dni(email, dni)
+    if existing:
+        same_email = (existing.get("email") or "").lower() == email
+        same_dni = existing.get("dni") == dni
+        if (
+            rol_codigo == "agricultor"
+            and same_email
+            and same_dni
+            and not repo.has_agricultor_profile(int(existing["id"]))
+        ):
+            repo.ensure_agricultor(int(existing["id"]), distrito)
+            return _build_register_response(int(existing["id"]), rol_codigo, estado)
+        if same_dni:
+            raise http_error("Ya existe una cuenta con este DNI. Inicie sesión.", 409)
+        if same_email:
+            raise http_error("Ya existe una cuenta con este correo. Inicie sesión.", 409)
+        raise http_error("El DNI o correo ya están registrados", 409)
 
-    user = {"id": user_id, "nombre": nombre, "email": email, "dni": dni, "rol": rol_codigo, "estado_cuenta": estado}
-    profile = repo.get_profile(user_id) or user
-    if es_tecnico:
-        return {"user": profile, "token": None, "pendienteAprobacion": True}
-    return {"user": profile, "token": create_token(user), "pendienteAprobacion": False}
+    try:
+        user_id = repo.create_user(nombre, email, dni, hash_password(data["password"]), rol_id, activo, estado)
+        if rol_codigo == "agricultor":
+            repo.ensure_agricultor(user_id, distrito)
+    except pymysql.IntegrityError as exc:
+        code = exc.args[0] if exc.args else 0
+        if code == 1062:
+            if "dni" in str(exc).lower():
+                raise http_error("Ya existe una cuenta con este DNI. Inicie sesión.", 409) from exc
+            if "email" in str(exc).lower():
+                raise http_error("Ya existe una cuenta con este correo. Inicie sesión.", 409) from exc
+        raise http_error("No se pudo completar el registro. Verifique sus datos.", 409) from exc
+
+    return _build_register_response(user_id, rol_codigo, estado)
 
 
 def get_profile(user_id: int) -> dict[str, Any] | None:
