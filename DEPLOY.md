@@ -43,9 +43,13 @@ Railway asigna `PORT` automáticamente.
 
 Servicio web → **Settings** → **Networking** → **Generate Domain**
 
-La app queda en una URL como `https://agrijunin-production.up.railway.app`
+**URL en producción:** https://agrijunin-web-production.up.railway.app
 
-## Despliegue con CLI
+## Verificación
+
+```bash
+curl https://agrijunin-web-production.up.railway.app/api/health
+```
 
 ```bash
 npm install -g @railway/cli
