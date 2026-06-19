@@ -55,7 +55,7 @@ async def buscar(q: str) -> dict[str, Any]:
     resultados = buscar_local(q)
     fuente = "AgriJunín"
 
-    if settings.trefle_api_token and len(resultados) < 8:
+    if settings.trefle_api_token:
         try:
             async with httpx.AsyncClient(timeout=12) as client:
                 resp = await client.get(

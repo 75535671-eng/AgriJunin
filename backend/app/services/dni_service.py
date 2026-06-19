@@ -42,8 +42,14 @@ async def consultar_dni(dni: str) -> dict[str, Any] | None:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(url)
+            if resp.status_code == 401:
+                return None
             if resp.status_code != 200:
                 return None
             return _map_dni_response(dni, resp.json())
     except httpx.HTTPError:
         return None
+
+
+def dni_disponible() -> bool:
+    return bool(settings.apisperu_dni_token)

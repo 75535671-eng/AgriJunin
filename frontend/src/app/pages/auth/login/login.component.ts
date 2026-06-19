@@ -70,9 +70,7 @@ export class LoginComponent implements OnInit {
       },
       error: (err) => {
         if (err?.status === 0) {
-          this.error.set(
-            'No se pudo conectar con el servidor. Verifique que MySQL y el backend estén activos (puerto 3000).'
-          );
+          this.error.set('No se pudo conectar con el servidor. Intente de nuevo en unos segundos.');
         } else if (err?.status === 403) {
           this.error.set(err?.error?.message || 'Cuenta pendiente de aprobación');
         } else {

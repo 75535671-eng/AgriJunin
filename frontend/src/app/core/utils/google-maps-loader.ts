@@ -18,7 +18,7 @@ export function loadGoogleMaps(apiKey: string): Promise<void> {
       delete window.__agriMapsLoad;
     };
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,geometry&callback=__agriMapsLoad`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,geometry&loading=async&callback=__agriMapsLoad`;
     script.async = true;
     script.defer = true;
     script.onerror = () => reject(new Error('No se pudo cargar Google Maps'));

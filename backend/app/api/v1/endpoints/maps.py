@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_roles
-from app.core.responses import success
+from app.core.responses import fail, success
 from app.services import maps_service
 
 router = APIRouter(tags=["Mapas"])
@@ -19,7 +19,10 @@ async def maps_directions(
     lat: float = Query(..., ge=-90, le=90),
     lng: float = Query(..., ge=-180, le=180),
 ):
-    return success(await maps_service.directions(lat, lng))
+    result = await maps_service.directions(lat, lng)
+    if result.get("error"):
+        return fail(str(result["error"]), 503)
+    return success(result)
 
 
 @router.get("/maps/geocode", dependencies=[Depends(require_roles("administrador", "tecnico", "agricultor"))])
@@ -27,4 +30,7 @@ async def maps_geocode(
     lat: float = Query(..., ge=-90, le=90),
     lng: float = Query(..., ge=-180, le=180),
 ):
-    return success(await maps_service.reverse_geocode(lat, lng))
+    result = await maps_service.reverse_geocode(lat, lng)
+    if result.get("error"):
+        return fail(str(result["error"]), 503)
+    return success(result)

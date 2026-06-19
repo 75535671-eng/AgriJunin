@@ -14,9 +14,11 @@ router = APIRouter(tags=["Autenticación"])
 
 @router.get("/auth/consulta-dni/{dni}")
 async def consulta_dni(dni: Annotated[str, Path(pattern=r"^\d{8}$")]):
+    if not dni_service.dni_disponible():
+        return fail("Consulta DNI no configurada en el servidor", 503)
     data = await dni_service.consultar_dni(dni)
     if not data:
-        return fail("DNI no encontrado", 404)
+        return fail("DNI no encontrado en RENIEC", 404)
     return success(data)
 
 
