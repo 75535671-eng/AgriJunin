@@ -47,8 +47,17 @@ export class LoteMapPickerComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.mapsApi.getConfig().subscribe({
       next: (res) => {
-        this.centro = res.data.centro;
-        loadGoogleMaps(res.data.apiKey)
+        const centro = res.data.centro;
+        if (centro?.lat != null && centro?.lng != null) {
+          this.centro = { lat: centro.lat, lng: centro.lng };
+        }
+        const apiKey = res.data.apiKey;
+        if (!apiKey) {
+          this.loading.set(false);
+          this.mapError.set('Google Maps API key no configurada en el servidor.');
+          return;
+        }
+        loadGoogleMaps(apiKey)
           .then(() => this.initMap())
           .catch(() => this.mapError.set('No se pudo cargar el mapa. Verifique GOOGLE_MAPS_API_KEY.'));
       },

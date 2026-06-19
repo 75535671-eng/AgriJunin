@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import Scope, UserContext, get_current_user, get_scope, require_roles
 from app.core.responses import fail, paginated, success
@@ -15,8 +15,18 @@ router = APIRouter(tags=["Cultivos"])
 
 
 @router.get("/cultivos", dependencies=[Depends(require_roles("administrador", "tecnico", "agricultor"))])
-async def get_cultivos(scope: Annotated[Scope, Depends(get_scope)], pagination: Annotated[PaginationQuery, Depends()]):
-    r = domain_service.list_cultivos(pagination.model_dump(), scope)
+async def get_cultivos(
+    scope: Annotated[Scope, Depends(get_scope)],
+    pagination: Annotated[PaginationQuery, Depends()],
+    pendientes: str | None = Query(default=None),
+    solo_aprobados: str | None = Query(default=None),
+):
+    query = pagination.model_dump()
+    if pendientes:
+        query["pendientes"] = pendientes
+    if solo_aprobados:
+        query["solo_aprobados"] = solo_aprobados
+    r = domain_service.list_cultivos(query, scope)
     return paginated(r["data"], r["pagination"], "Cultivos obtenidos")
 
 

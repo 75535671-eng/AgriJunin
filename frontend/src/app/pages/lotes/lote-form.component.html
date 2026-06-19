@@ -16,7 +16,7 @@
   <div class="alert-warn card">Su cuenta no está vinculada a un agricultor. Contacte al administrador.</div>
 }
 
-<form (ngSubmit)="save()" class="card form-card">
+<form (submit)="save($event)" class="card form-card" novalidate>
   <div class="form-grid">
     @if (!auth.isAgricultor()) {
       <div class="form-group">

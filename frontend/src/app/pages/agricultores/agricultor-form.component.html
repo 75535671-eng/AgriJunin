@@ -11,7 +11,7 @@
     </div>
   }
 
-  <form (ngSubmit)="submit()" class="card form-card">
+  <form (submit)="submit($event)" class="card form-card" novalidate>
     <div class="form-grid form-grid--fields">
       <div class="form-group">
         <label>ID Usuario *</label>

@@ -215,16 +215,25 @@ def list_cultivos(query: dict[str, Any], scope: Scope) -> dict[str, Any]:
     page, limit = int(query.get("page", 1)), int(query.get("limit", 10))
     sql = f"""SELECT c.*, tc.codigo AS tipo, tmc.codigo AS temporada,
                      pc.humedad_optima_min, pc.humedad_optima_max, pc.temp_optima_min, pc.temp_optima_max,
-                     COALESCE(sol.estado,'aprobado') AS estado_aprobacion, sol.solicitado_por
+                     COALESCE(sol.estado,'aprobado') AS estado_aprobacion, sol.solicitado_por,
+                     (SELECT COUNT(*) FROM lotes lx WHERE lx.cultivo_id = c.id AND lx.activo = 1) AS total_lotes
               FROM cultivos c {CULTIVO_JOINS} {SOL_JOIN_CULTIVO} WHERE 1=1"""
     params: list[Any] = []
     sf = lotes_agricultor_clause(scope, "l")
     if sf.clause:
         sql += f" AND EXISTS (SELECT 1 FROM lotes l WHERE l.cultivo_id = c.id AND l.activo = 1{sf.clause})"
         params.extend(sf.params)
+    if query.get("pendientes"):
+        sql += " AND COALESCE(sol.estado,'aprobado') = 'pendiente'"
+    elif query.get("solo_aprobados"):
+        sql += " AND COALESCE(sol.estado,'aprobado') = 'aprobado'"
+    if query.get("search"):
+        term = f"%{query['search']}%"
+        sql += " AND (c.nombre LIKE %s OR c.nombre_cientifico LIKE %s OR tc.codigo LIKE %s)"
+        params.extend([term, term, term])
     total_row = fetch_one(f"SELECT COUNT(*) AS total FROM ({sql}) AS sub", params)
     total = int(total_row["total"]) if total_row else 0
-    sql += " ORDER BY c.nombre ASC LIMIT %s OFFSET %s"
+    sql += " ORDER BY CASE COALESCE(sol.estado,'aprobado') WHEN 'pendiente' THEN 0 ELSE 1 END, c.nombre ASC LIMIT %s OFFSET %s"
     params.extend([limit, (page - 1) * limit])
     return {"data": fetch_all(sql, params), "pagination": paginate(page, limit, total)}
 
@@ -398,16 +407,35 @@ def delete_registro(id_: int) -> bool:
 
 def list_alertas(query: dict[str, Any], scope: Scope) -> dict[str, Any]:
     page, limit = int(query.get("page", 1)), int(query.get("limit", 10))
-    sql = """SELECT al.*, COALESCE(r.lote_id, s.lote_id) AS lote_id, l.nombre AS lote_nombre
+    sql = """SELECT al.*, COALESCE(r.lote_id, s.lote_id) AS lote_id,
+                    l.nombre AS lote_nombre, l.codigo_lote,
+                    c.nombre AS cultivo_nombre, u.nombre AS agricultor_nombre,
+                    s.codigo_sensor, s.nombre AS sensor_nombre
              FROM alertas al
              LEFT JOIN registros_agricolas r ON al.registro_id = r.id
              LEFT JOIN sensores s ON al.sensor_id = s.id
              LEFT JOIN lotes l ON COALESCE(r.lote_id, s.lote_id) = l.id
+             LEFT JOIN cultivos c ON l.cultivo_id = c.id
+             LEFT JOIN agricultores a ON l.agricultor_id = a.id
+             LEFT JOIN usuarios u ON a.usuario_id = u.id
              WHERE (l.id IS NOT NULL OR al.tipo = 'sistema')"""
     params: list[Any] = []
     sf = lotes_agricultor_clause(scope, "l")
     sql += sf.clause
     params.extend(sf.params)
+    if query.get("codigo_lote"):
+        sql += " AND l.codigo_lote LIKE %s"
+        params.append(f"%{query['codigo_lote']}%")
+    if query.get("nivel"):
+        sql += " AND al.nivel = %s"
+        params.append(query["nivel"])
+    if query.get("tipo"):
+        sql += " AND al.tipo = %s"
+        params.append(query["tipo"])
+    if query.get("search"):
+        term = f"%{query['search']}%"
+        sql += " AND (al.titulo LIKE %s OR al.mensaje LIKE %s OR l.codigo_lote LIKE %s OR l.nombre LIKE %s)"
+        params.extend([term, term, term, term])
     total_row = fetch_one(f"SELECT COUNT(*) AS total FROM ({sql}) t", params)
     total = int(total_row["total"]) if total_row else 0
     sql += " ORDER BY al.fecha_alerta DESC LIMIT %s OFFSET %s"

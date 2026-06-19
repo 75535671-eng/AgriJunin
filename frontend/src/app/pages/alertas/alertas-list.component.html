@@ -3,30 +3,81 @@
 <app-page-header title="Alertas inteligentes" subtitle="Vinculadas al lote, agricultor y cultivo del registro"
   actionLabel="Nueva alerta" [showAction]="auth.canEdit()" (actionClick)="router.navigate(['/alertas/nuevo'])" />
 
-<div class="alerts-grid">
-  @for (a of store.items(); track a.id) {
-    <div class="card alert-card" [class.alert-card--critica]="a.nivel==='critica'">
-      <div class="alert-card__header">
-        <span class="badge" [class.badge--danger]="a.nivel==='critica'" [class.badge--warning]="a.nivel==='advertencia'" [class.badge--info]="a.nivel==='info'">{{ a.nivel }}</span>
-        <span class="badge badge--success">{{ a.tipo }}</span>
-      </div>
-      <h4>{{ a.titulo }}</h4>
-      <p>{{ a.mensaje }}</p>
-      <footer class="alert-card__footer">
-        <small>
-          👨‍🌾 {{ a.agricultor_nombre || '—' }} · 🗺️ {{ a.lote_nombre || '—' }}
-          @if (a.cultivo_nombre) { · 🌱 {{ a.cultivo_nombre }} }
-          @if (a.codigo_sensor) { · 📡 {{ a.codigo_sensor }} }
-          — {{ a.fecha_alerta | date:'medium' }}
-        </small>
-        <div class="alert-card__actions">
-          @if (!a.leida) { <span class="badge badge--warning">Nueva</span> }
-          @if (auth.canEdit()) { <a [routerLink]="['/alertas', a.id, 'editar']" class="btn btn--outline btn--sm">Editar</a> }
-          @if (auth.isAdmin()) { <button type="button" class="btn btn--danger btn--sm" (click)="del(a.id!)">Eliminar</button> }
-        </div>
-      </footer>
+<div class="toolbar card filters-bar">
+  <div class="filters-bar__row">
+    <div class="form-group filters-bar__field">
+      <label>Código de lote</label>
+      <input
+        type="search"
+        placeholder="Ej. LOT-CHU-001"
+        [ngModel]="codigoLote()"
+        (ngModelChange)="onCodigoLoteChange($event)"
+      />
     </div>
-  } @empty {
-    <p class="empty">No hay alertas registradas</p>
-  }
+    <div class="form-group filters-bar__field">
+      <label>Nivel</label>
+      <select [ngModel]="nivel()" (ngModelChange)="onNivelChange($event)">
+        <option value="">Todos</option>
+        <option value="critica">Crítica</option>
+        <option value="advertencia">Advertencia</option>
+        <option value="info">Info</option>
+      </select>
+    </div>
+    <div class="form-group filters-bar__field">
+      <label>Tipo</label>
+      <select [ngModel]="tipo()" (ngModelChange)="onTipoChange($event)">
+        <option value="">Todos</option>
+        <option value="humedad">Humedad</option>
+        <option value="temperatura">Temperatura</option>
+        <option value="pluvia">Pluvia</option>
+        <option value="sensor">Sensor</option>
+        <option value="produccion">Producción</option>
+        <option value="sistema">Sistema</option>
+      </select>
+    </div>
+    @if (codigoLote() || nivel() || tipo()) {
+      <button type="button" class="btn btn--outline btn--sm filters-bar__clear" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    }
+  </div>
 </div>
+
+@if (store.loading()) {
+  <p class="loading">Cargando alertas...</p>
+} @else {
+  <div class="alerts-grid">
+    @for (a of store.items(); track a.id) {
+      <div class="card alert-card" [class.alert-card--critica]="a.nivel==='critica'">
+        <div class="alert-card__header">
+          <span class="badge" [class.badge--danger]="a.nivel==='critica'" [class.badge--warning]="a.nivel==='advertencia'" [class.badge--info]="a.nivel==='info'">{{ a.nivel }}</span>
+          <span class="badge badge--success">{{ a.tipo }}</span>
+          @if (a.codigo_lote) {
+            <span class="badge badge--lote" title="Código de lote">{{ a.codigo_lote }}</span>
+          }
+        </div>
+        <h4>{{ a.titulo }}</h4>
+        <p>{{ a.mensaje }}</p>
+        <footer class="alert-card__footer">
+          <small>
+            👨‍🌾 {{ a.agricultor_nombre || '—' }}
+            @if (a.codigo_lote) {
+              · <strong class="lote-code">📍 {{ a.codigo_lote }}</strong>
+            }
+            @if (a.lote_nombre) { · 🗺️ {{ a.lote_nombre }} }
+            @if (a.cultivo_nombre) { · 🌱 {{ a.cultivo_nombre }} }
+            @if (a.codigo_sensor) { · 📡 {{ a.codigo_sensor }} }
+            — {{ a.fecha_alerta | date:'medium' }}
+          </small>
+          <div class="alert-card__actions">
+            @if (!a.leida) { <span class="badge badge--warning">Nueva</span> }
+            @if (auth.canEdit()) { <a [routerLink]="['/alertas', a.id, 'editar']" class="btn btn--outline btn--sm">Editar</a> }
+            @if (auth.isAdmin()) { <button type="button" class="btn btn--danger btn--sm" (click)="del(a.id!)">Eliminar</button> }
+          </div>
+        </footer>
+      </div>
+    } @empty {
+      <p class="empty">No hay alertas con los filtros seleccionados</p>
+    }
+  </div>
+}

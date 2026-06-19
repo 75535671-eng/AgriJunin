@@ -75,7 +75,8 @@ export class AgricultorFormComponent implements OnInit {
     }
   }
 
-  submit(): void {
+  submit(event: Event): void {
+    event.preventDefault();
     touchFields(
       this.agricultorForm.usuario_id,
       this.agricultorForm.distrito,

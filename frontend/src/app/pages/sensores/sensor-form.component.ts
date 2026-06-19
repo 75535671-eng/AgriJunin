@@ -64,7 +64,8 @@ export class SensorFormComponent implements OnInit {
     }
   }
 
-  save(): void {
+  save(event: Event): void {
+    event.preventDefault();
     touchFields(
       this.sensorForm.lote_id,
       this.sensorForm.codigo_sensor,

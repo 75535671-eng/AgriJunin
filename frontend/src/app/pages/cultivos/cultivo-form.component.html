@@ -5,7 +5,7 @@
   </p>
 }
 
-<form (ngSubmit)="save()" class="card form-card">
+<form (submit)="save($event)" class="card form-card" novalidate>
   <div class="form-grid">
     @if (auth.isAgricultor() || lotesDisponibles().length) {
       <div class="form-group full-width">

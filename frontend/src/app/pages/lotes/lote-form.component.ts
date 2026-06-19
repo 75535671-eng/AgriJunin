@@ -108,7 +108,8 @@ export class LoteFormComponent implements OnInit {
     }));
   }
 
-  save(): void {
+  save(event: Event): void {
+    event.preventDefault();
     touchFields(
       this.loteForm.agricultor_id,
       this.loteForm.cultivo_id,

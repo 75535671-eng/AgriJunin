@@ -89,7 +89,8 @@ export class AlertaFormComponent implements OnInit {
     return this.alertaModel().tipo === 'sistema';
   }
 
-  save(): void {
+  save(event: Event): void {
+    event.preventDefault();
     touchFields(
       this.alertaForm.tipo,
       this.alertaForm.nivel,

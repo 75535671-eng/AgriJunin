@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { form, FormField, minLength, required, validate } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { AuthStateService } from '../../../core/services/auth-state.service';
 import { firstFieldError, showFieldError, touchFields } from '../../../shared/utils/form-signals';
 
 @Component({
@@ -10,8 +11,9 @@ import { firstFieldError, showFieldError, touchFields } from '../../../shared/ut
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly authState = inject(AuthStateService);
   private readonly router = inject(Router);
 
   protected readonly loading = signal(false);
@@ -34,7 +36,26 @@ export class LoginComponent {
     minLength(path.password, 6, { message: 'Mínimo 6 caracteres' });
   });
 
-  submit(): void {
+  ngOnInit(): void {
+    this.authState.clearSession();
+    this.restoreFromBrokenUrl();
+  }
+
+  /** Recupera credenciales si el formulario se envió por GET (URL con ?ng.form0.login=...) */
+  private restoreFromBrokenUrl(): void {
+    if (typeof window === 'undefined' || !window.location.search) return;
+    const params = new URLSearchParams(window.location.search);
+    const login = params.get('ng.form0.login') ?? params.get('login') ?? '';
+    const password = params.get('ng.form0.password') ?? params.get('password') ?? '';
+    if (!login) return;
+    this.loginModel.set({ login, password });
+    void this.router.navigate(['/auth/login'], { replaceUrl: true }).then(() => {
+      if (password) this.submit();
+    });
+  }
+
+  submit(event?: Event): void {
+    event?.preventDefault();
     touchFields(this.loginForm.login, this.loginForm.password);
     if (this.loginForm().invalid()) {
       return;
@@ -43,18 +64,22 @@ export class LoginComponent {
     this.error.set(null);
     const { login, password } = this.loginModel();
     this.auth.login(login.trim(), password).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => {
+        this.loading.set(false);
+        this.router.navigate(['/dashboard']);
+      },
       error: (err) => {
         if (err?.status === 0) {
           this.error.set(
-            'No se pudo conectar con el servidor. Inicie el backend (puerto 3000).'
+            'No se pudo conectar con el servidor. Verifique que MySQL y el backend estén activos (puerto 3000).'
           );
+        } else if (err?.status === 403) {
+          this.error.set(err?.error?.message || 'Cuenta pendiente de aprobación');
         } else {
-          this.error.set(err?.error?.message || 'Credenciales inválidas');
+          this.error.set(err?.error?.message || err?.message || 'Credenciales inválidas');
         }
         this.loading.set(false);
       },
-      complete: () => this.loading.set(false),
     });
   }
 }

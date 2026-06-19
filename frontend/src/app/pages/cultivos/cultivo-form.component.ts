@@ -136,7 +136,8 @@ export class CultivoFormComponent implements OnInit {
     this.busqueda.set(p.nombre);
   }
 
-  save(): void {
+  save(event: Event): void {
+    event.preventDefault();
     touchFields(
       this.cultivoForm.lote_solicitud_id,
       this.cultivoForm.nombre,

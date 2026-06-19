@@ -117,7 +117,8 @@ export class RegisterComponent {
     });
   }
 
-  submit(): void {
+  submit(event: Event): void {
+    event.preventDefault();
     if (!this.dniOk()) {
       this.error.set('Consulte su DNI con RENIEC antes de registrarse');
       return;

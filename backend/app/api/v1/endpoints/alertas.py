@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import Scope, get_scope, require_roles
 from app.core.responses import fail, paginated, success
@@ -14,8 +14,21 @@ router = APIRouter(tags=["Alertas"])
 
 
 @router.get("/alertas", dependencies=[Depends(require_roles("administrador", "tecnico", "agricultor"))])
-async def get_alertas(scope: Annotated[Scope, Depends(get_scope)], pagination: Annotated[PaginationQuery, Depends()]):
-    r = domain_service.list_alertas(pagination.model_dump(), scope)
+async def get_alertas(
+    scope: Annotated[Scope, Depends(get_scope)],
+    pagination: Annotated[PaginationQuery, Depends()],
+    codigo_lote: str | None = Query(default=None),
+    nivel: str | None = Query(default=None),
+    tipo: str | None = Query(default=None),
+):
+    query = pagination.model_dump()
+    if codigo_lote:
+        query["codigo_lote"] = codigo_lote.strip()
+    if nivel:
+        query["nivel"] = nivel.strip()
+    if tipo:
+        query["tipo"] = tipo.strip()
+    r = domain_service.list_alertas(query, scope)
     return paginated(r["data"], r["pagination"], "Alertas obtenidas")
 
 

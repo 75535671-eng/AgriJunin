@@ -4,7 +4,7 @@
   <p class="form-error">{{ error() }}</p>
 }
 
-<form (ngSubmit)="save()" class="card form-card">
+<form (submit)="save($event)" class="card form-card" novalidate>
   <div class="form-grid">
     <div class="form-group">
       <label>Tipo *</label>

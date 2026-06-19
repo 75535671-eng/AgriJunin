@@ -55,9 +55,14 @@ export class AuthStateService {
   }
 
   logout(): void {
+    this.clearSession();
+    this.router.navigate(['/auth/login']);
+  }
+
+  /** Limpia token y usuario sin redirigir (útil para interceptores). */
+  clearSession(): void {
     this._token.set(null);
     this._user.set(null);
-    this.router.navigate(['/auth/login']);
   }
 
   hasRole(...roles: string[]): boolean {

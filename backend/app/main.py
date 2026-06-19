@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import router as api_router
 from app.core.config import settings
 from app.core.database import test_connection
 from app.core.responses import fail
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -29,13 +33,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+cors_origins = {
+    "http://localhost:4200",
+    "http://127.0.0.1:4200",
+    settings.cors_origin,
+}
+if settings.cors_origin:
+    cors_origins.add(settings.cors_origin.rstrip("/"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:4200",
-        "http://127.0.0.1:4200",
-        settings.cors_origin,
-    ],
+    allow_origins=sorted(cors_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,3 +70,18 @@ async def health() -> JSONResponse:
 
 
 app.include_router(api_router, prefix="/api")
+
+
+if settings.env == "production" and STATIC_DIR.is_dir():
+    assets_dir = STATIC_DIR / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str) -> FileResponse:
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="No encontrado")
+        candidate = STATIC_DIR / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(STATIC_DIR / "index.html")

@@ -11,7 +11,7 @@ foreach ($port in 3000, 4200) {
 
 Start-Sleep -Seconds 1
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\backend'; uvicorn app.main:app --reload --host 0.0.0.0 --port 3000"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\backend'; python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 3000"
 Write-Host "Backend (FastAPI) en http://localhost:3000/api"
 
 Start-Sleep -Seconds 3

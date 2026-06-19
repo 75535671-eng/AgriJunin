@@ -64,6 +64,58 @@
   padding: 2rem 1rem;
 }
 
+.filters-bar {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+
+  &__field {
+    flex: 1 1 180px;
+    margin: 0;
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      width: 100%;
+    }
+  }
+
+  &__clear {
+    flex: 0 0 auto;
+    margin-bottom: 0.15rem;
+  }
+}
+
+.badge--lote {
+  background: #e8f5e9;
+  color: var(--primary-dark);
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.lote-code {
+  color: var(--primary-dark);
+  font-family: monospace;
+}
+
+.loading {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem;
+}
+
 @media (max-width: 576px) {
   .alert-card__actions {
     flex-direction: column;

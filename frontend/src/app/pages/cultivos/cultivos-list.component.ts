@@ -25,25 +25,30 @@ export class CultivosListComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.auth.canEdit()) this.filtro.set('pendientes');
-    this.refresh();
+    this.applyFilters();
   }
 
   onSearch(term: string): void {
     this.search.set(term);
     this.store.setSearch(term);
-    this.refresh();
+    this.applyFilters();
   }
 
   setFiltro(f: 'todos' | 'pendientes' | 'aprobados'): void {
     this.filtro.set(f);
-    this.refresh();
+    this.applyFilters();
+  }
+
+  private applyFilters(): void {
+    const filters: Record<string, string> = {};
+    if (this.filtro() === 'pendientes') filters['pendientes'] = '1';
+    else if (this.filtro() === 'aprobados') filters['solo_aprobados'] = '1';
+    this.store.setFilters(filters);
+    this.store.setPage(1);
   }
 
   private refresh(): void {
-    const extra: Record<string, string> = {};
-    if (this.filtro() === 'pendientes') extra['pendientes'] = '1';
-    if (this.filtro() === 'aprobados') extra['solo_aprobados'] = '1';
-    this.store.refresh(extra);
+    this.store.refresh();
   }
 
   aprobacionLabel(c: Cultivo): string {

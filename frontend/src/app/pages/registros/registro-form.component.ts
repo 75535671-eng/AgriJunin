@@ -67,7 +67,8 @@ export class RegistroFormComponent implements OnInit {
     }
   }
 
-  save(): void {
+  save(event: Event): void {
+    event.preventDefault();
     touchFields(this.registroForm.lote_id);
     if (this.registroForm().invalid()) {
       return;

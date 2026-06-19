@@ -12,15 +12,17 @@ export class AuthService {
   private readonly climaPrompt = inject(ClimaSyncPromptService);
 
   login(login: string, password: string) {
-    const body = /^\d{8}$/.test(login.trim())
-      ? { dni: login.trim(), password }
-      : { email: login.trim(), password };
+    const trimmed = login.trim();
+    const body = /^\d{8}$/.test(trimmed)
+      ? { dni: trimmed, password }
+      : { email: trimmed.toLowerCase(), password };
     return this.api.post<AuthData>('auth/login', body).pipe(
       tap((res) => {
-        if (res.data.token) {
-          this.state.setSession({ user: res.data.user, token: res.data.token });
-          this.climaPrompt.markShowAfterLogin();
+        if (!res.data?.token) {
+          throw new Error(res.message || 'No se recibió token de sesión');
         }
+        this.state.setSession({ user: res.data.user, token: res.data.token });
+        this.climaPrompt.markShowAfterLogin();
       })
     );
   }

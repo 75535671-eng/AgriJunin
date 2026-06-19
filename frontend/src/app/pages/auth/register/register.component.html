@@ -10,7 +10,7 @@
       <div class="alert alert--error">{{ error() }}</div>
     }
 
-    <form (ngSubmit)="submit()">
+    <form (submit)="submit($event)" novalidate>
       <div class="form-group">
         <label>DNI *</label>
         <div class="dni-row">
