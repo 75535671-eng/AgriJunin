@@ -86,6 +86,7 @@ export interface Agricultor {
   notas?: string;
   usuario_email?: string;
   usuario_nombre?: string;
+  usuario_dni?: string;
   total_lotes?: number;
   total_cultivos_distintos?: number;
   cultivos_en_lotes?: string;
