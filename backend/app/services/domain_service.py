@@ -445,8 +445,8 @@ def list_alertas(query: dict[str, Any], scope: Scope) -> dict[str, Any]:
         params.append(query["tipo"])
     if query.get("nombre"):
         term = f"%{query['nombre']}%"
-        sql += " AND (al.titulo LIKE %s OR al.mensaje LIKE %s OR u.nombre LIKE %s OR l.nombre LIKE %s)"
-        params.extend([term, term, term, term])
+        sql += " AND (al.titulo LIKE %s OR al.mensaje LIKE %s OR u.nombre LIKE %s OR l.nombre LIKE %s OR l.codigo_lote LIKE %s)"
+        params.extend([term, term, term, term, term])
     if query.get("search"):
         term = f"%{query['search']}%"
         sql += " AND (al.titulo LIKE %s OR al.mensaje LIKE %s OR l.codigo_lote LIKE %s OR l.nombre LIKE %s)"

@@ -177,6 +177,37 @@ def _sensor_lectura(tipo: str, temp: float, humedad_aire: float, humedad_suelo: 
     return None
 
 
+def _alerta_abierta_existe(lote_id: int, tipo: str, nivel: str) -> int | None:
+    row = fetch_one(
+        """SELECT al.id FROM alertas al
+           LEFT JOIN registros_agricolas r ON al.registro_id = r.id
+           LEFT JOIN sensores s ON al.sensor_id = s.id
+           WHERE al.tipo = %s AND al.nivel = %s AND al.resuelta = 0
+             AND COALESCE(r.lote_id, s.lote_id) = %s
+           ORDER BY al.id DESC LIMIT 1""",
+        (tipo, nivel, lote_id),
+    )
+    return int(row["id"]) if row else None
+
+
+def _crear_alerta_si_nueva(
+    lote_id: int,
+    registro_id: int,
+    tipo: str,
+    nivel: str,
+    titulo: str,
+    mensaje: str,
+) -> dict[str, Any] | None:
+    existing = _alerta_abierta_existe(lote_id, tipo, nivel)
+    if existing:
+        return {"id": existing, "tipo": tipo, "nivel": nivel, "duplicada": True}
+    rows = call_proc(
+        "sp_alerta_crear",
+        (registro_id, None, tipo, nivel, titulo, mensaje),
+    )
+    return {"id": int(rows[0]["alerta_id"]), "tipo": tipo, "nivel": nivel}
+
+
 def _generar_alertas(
     registro_id: int,
     lote: dict[str, Any],
@@ -190,73 +221,65 @@ def _generar_alertas(
     t_min = lote.get("temp_optima_min")
     t_max = lote.get("temp_optima_max")
 
+    lote_id = int(lote["id"])
+
     if h_min is not None and humedad_suelo < float(h_min):
-        rows = call_proc(
-            "sp_alerta_crear",
-            (
-                registro_id,
-                None,
-                "humedad",
-                "critica",
-                f"Humedad crítica en {lote['nombre']}",
-                f"La humedad del suelo ({humedad_suelo:.1f}%) está por debajo del mínimo óptimo ({h_min}%).",
-            ),
+        created = _crear_alerta_si_nueva(
+            lote_id,
+            registro_id,
+            "humedad",
+            "critica",
+            f"Humedad crítica en {lote['nombre']}",
+            f"La humedad del suelo ({humedad_suelo:.1f}%) está por debajo del mínimo óptimo ({h_min}%).",
         )
-        alertas.append({"id": int(rows[0]["alerta_id"]), "tipo": "humedad", "nivel": "critica"})
+        if created:
+            alertas.append(created)
     elif h_max is not None and humedad_suelo > float(h_max):
-        rows = call_proc(
-            "sp_alerta_crear",
-            (
-                registro_id,
-                None,
-                "humedad",
-                "advertencia",
-                f"Humedad elevada en {lote['nombre']}",
-                f"La humedad del suelo ({humedad_suelo:.1f}%) supera el máximo óptimo ({h_max}%).",
-            ),
+        created = _crear_alerta_si_nueva(
+            lote_id,
+            registro_id,
+            "humedad",
+            "advertencia",
+            f"Humedad elevada en {lote['nombre']}",
+            f"La humedad del suelo ({humedad_suelo:.1f}%) supera el máximo óptimo ({h_max}%).",
         )
-        alertas.append({"id": int(rows[0]["alerta_id"]), "tipo": "humedad", "nivel": "advertencia"})
+        if created:
+            alertas.append(created)
 
     if t_min is not None and temp < float(t_min):
-        rows = call_proc(
-            "sp_alerta_crear",
-            (
-                registro_id,
-                None,
-                "temperatura",
-                "advertencia",
-                f"Temperatura baja en {lote['nombre']}",
-                f"Temperatura {temp:.1f}°C por debajo del rango óptimo ({t_min}°C).",
-            ),
+        created = _crear_alerta_si_nueva(
+            lote_id,
+            registro_id,
+            "temperatura",
+            "advertencia",
+            f"Temperatura baja en {lote['nombre']}",
+            f"Temperatura {temp:.1f}°C por debajo del rango óptimo ({t_min}°C).",
         )
-        alertas.append({"id": int(rows[0]["alerta_id"]), "tipo": "temperatura", "nivel": "advertencia"})
+        if created:
+            alertas.append(created)
     elif t_max is not None and temp > float(t_max):
-        rows = call_proc(
-            "sp_alerta_crear",
-            (
-                registro_id,
-                None,
-                "temperatura",
-                "advertencia",
-                f"Temperatura alta en {lote['nombre']}",
-                f"Temperatura {temp:.1f}°C por encima del rango óptimo ({t_max}°C).",
-            ),
+        created = _crear_alerta_si_nueva(
+            lote_id,
+            registro_id,
+            "temperatura",
+            "advertencia",
+            f"Temperatura alta en {lote['nombre']}",
+            f"Temperatura {temp:.1f}°C por encima del rango óptimo ({t_max}°C).",
         )
-        alertas.append({"id": int(rows[0]["alerta_id"]), "tipo": "temperatura", "nivel": "advertencia"})
+        if created:
+            alertas.append(created)
 
     if precip >= 10:
-        rows = call_proc(
-            "sp_alerta_crear",
-            (
-                registro_id,
-                None,
-                "pluvia",
-                "advertencia",
-                "Precipitación elevada",
-                f"Se registraron {precip:.1f} mm de lluvia. Monitorear drenaje del lote.",
-            ),
+        created = _crear_alerta_si_nueva(
+            lote_id,
+            registro_id,
+            "pluvia",
+            "advertencia",
+            "Precipitación elevada",
+            f"Se registraron {precip:.1f} mm de lluvia. Monitorear drenaje del lote.",
         )
-        alertas.append({"id": int(rows[0]["alerta_id"]), "tipo": "pluvia", "nivel": "advertencia"})
+        if created:
+            alertas.append(created)
 
     return alertas
 

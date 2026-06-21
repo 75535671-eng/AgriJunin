@@ -3,7 +3,7 @@
 <app-page-header title="Alertas inteligentes" subtitle="Vinculadas al lote, agricultor y cultivo del registro"
   actionLabel="Nueva alerta" [showAction]="auth.canEdit()" (actionClick)="router.navigate(['/alertas/nuevo'])" />
 
-<div class="toolbar card filters-bar">
+<div class="toolbar card filters-bar" [class.filters-bar--active]="hasActiveFilters()">
   <div class="filters-bar__row">
     <div class="form-group filters-bar__field">
       <label>Código de lote</label>
@@ -11,7 +11,7 @@
         type="search"
         placeholder="Ej. LOT-CHU-001"
         [ngModel]="codigoLote()"
-        (ngModelChange)="onCodigoLoteChange($event)"
+        (ngModelChange)="codigoLote.set($event)"
       />
     </div>
     <div class="form-group filters-bar__field">
@@ -20,12 +20,12 @@
         type="search"
         placeholder="Título, agricultor o lote"
         [ngModel]="nombre()"
-        (ngModelChange)="onNombreChange($event)"
+        (ngModelChange)="nombre.set($event)"
       />
     </div>
     <div class="form-group filters-bar__field">
       <label>Nivel</label>
-      <select [ngModel]="nivel()" (ngModelChange)="onNivelChange($event)">
+      <select [ngModel]="nivel()" (ngModelChange)="nivel.set($event)">
         <option value="">Todos</option>
         <option value="critica">Crítica</option>
         <option value="advertencia">Advertencia</option>
@@ -34,7 +34,7 @@
     </div>
     <div class="form-group filters-bar__field">
       <label>Tipo</label>
-      <select [ngModel]="tipo()" (ngModelChange)="onTipoChange($event)">
+      <select [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
         <option value="">Todos</option>
         <option value="humedad">Humedad</option>
         <option value="temperatura">Temperatura</option>
@@ -44,19 +44,30 @@
         <option value="sistema">Sistema</option>
       </select>
     </div>
-    @if (codigoLote() || nombre() || nivel() || tipo()) {
+    @if (hasActiveFilters()) {
       <button type="button" class="btn btn--outline btn--sm filters-bar__clear" (click)="clearFilters()">
         Limpiar filtros
       </button>
     }
   </div>
+
+  @if (hasActiveFilters()) {
+    <div class="filters-bar__active">
+      @for (label of activeFilterLabels(); track label) {
+        <span class="filter-chip">{{ label }}</span>
+      }
+      <span class="filters-bar__count">{{ pagination().total }} resultado(s)</span>
+    </div>
+  }
 </div>
 
-@if (store.loading()) {
+@if (loading()) {
   <p class="loading">Cargando alertas...</p>
+} @else if (error()) {
+  <p class="empty">{{ error() }}</p>
 } @else {
   <div class="alerts-grid">
-    @for (a of store.items(); track a.id) {
+    @for (a of visibleItems(); track a.id) {
       <div class="card alert-card" [class.alert-card--critica]="a.nivel==='critica'">
         <div class="alert-card__header">
           <span class="badge" [class.badge--danger]="a.nivel==='critica'" [class.badge--warning]="a.nivel==='advertencia'" [class.badge--info]="a.nivel==='info'">{{ a.nivel }}</span>
@@ -90,30 +101,25 @@
     }
   </div>
 
-  @if (store.pagination().totalPages > 1) {
+  @if (pagination().totalPages > 1) {
     <div class="pagination">
-      <button
-        type="button"
-        class="btn btn--outline btn--sm"
-        [disabled]="store.pagination().page <= 1"
-        (click)="store.setPage(store.pagination().page - 1)"
-      >
+      <button type="button" class="btn btn--outline btn--sm" [disabled]="pagination().page <= 1" (click)="prevPage()">
         Anterior
       </button>
       <span>
-        Página {{ store.pagination().page }} de {{ store.pagination().totalPages }}
-        · {{ store.pagination().total }} alerta(s)
+        Página {{ pagination().page }} de {{ pagination().totalPages }}
+        · {{ pagination().total }} alerta(s)
       </span>
       <button
         type="button"
         class="btn btn--outline btn--sm"
-        [disabled]="store.pagination().page >= store.pagination().totalPages"
-        (click)="store.setPage(store.pagination().page + 1)"
+        [disabled]="pagination().page >= pagination().totalPages"
+        (click)="nextPage()"
       >
         Siguiente
       </button>
     </div>
-  } @else if (store.pagination().total > 0) {
-    <p class="results-count">{{ store.pagination().total }} alerta(s) encontrada(s)</p>
+  } @else if (pagination().total > 0) {
+    <p class="results-count">{{ pagination().total }} alerta(s) encontrada(s)</p>
   }
 }
