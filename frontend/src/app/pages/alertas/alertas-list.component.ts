@@ -1,34 +1,13 @@
-import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import {
-  catchError,
-  combineLatest,
-  debounceTime,
-  distinctUntilChanged,
-  map,
-  merge,
-  of,
-  skip,
-  switchMap,
-  take,
-  tap,
-} from 'rxjs';
 import { AlertasStore } from '../../services/entity.service';
 import { ApiService } from '../../core/services/api.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { AuthStateService } from '../../core/services/auth-state.service';
 import { RelationBannerComponent } from '../../shared/components/relation-banner/relation-banner.component';
 import { Alerta, Pagination } from '../../models';
-
-interface AlertaQuery {
-  codigo_lote: string;
-  agricultor: string;
-  nivel: string;
-  tipo: string;
-}
 
 @Component({
   selector: 'app-alertas-list',
@@ -37,10 +16,9 @@ interface AlertaQuery {
   templateUrl: './alertas-list.component.html',
   styleUrl: './alertas-list.component.scss',
 })
-export class AlertasListComponent implements OnInit {
+export class AlertasListComponent implements OnInit, OnDestroy {
   private readonly store = inject(AlertasStore);
   private readonly api = inject(ApiService);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly auth = inject(AuthStateService);
   protected readonly router = inject(Router);
@@ -62,96 +40,56 @@ export class AlertasListComponent implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   private loadSeq = 0;
-
-  private readonly textQuery = computed<Pick<AlertaQuery, 'codigo_lote' | 'agricultor'>>(() => ({
-    codigo_lote: this.filtroCodigoLote().trim(),
-    agricultor: this.filtroAgricultor().trim(),
-  }));
-
-  private readonly selectQuery = computed<Pick<AlertaQuery, 'nivel' | 'tipo'>>(() => ({
-    nivel: this.filtroNivel(),
-    tipo: this.filtroTipo(),
-  }));
-
-  private readonly query = computed<AlertaQuery>(() => ({
-    ...this.textQuery(),
-    ...this.selectQuery(),
-  }));
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly hasActiveFilters = computed(() => {
-    const q = this.query();
-    return !!(q.codigo_lote || q.agricultor || q.nivel || q.tipo);
+    return !!(
+      this.filtroCodigoLote().trim() ||
+      this.filtroAgricultor().trim() ||
+      this.filtroNivel() ||
+      this.filtroTipo()
+    );
   });
 
   protected readonly activeFilterLabels = computed(() => {
-    const q = this.query();
     const labels: string[] = [];
-    if (q.codigo_lote) labels.push(`Lote: ${q.codigo_lote}`);
-    if (q.agricultor) labels.push(`Agricultor: ${q.agricultor}`);
-    if (q.nivel) labels.push(`Nivel: ${q.nivel}`);
-    if (q.tipo) labels.push(`Tipo: ${q.tipo}`);
+    const lote = this.filtroCodigoLote().trim();
+    const agri = this.filtroAgricultor().trim();
+    if (lote) labels.push(`Lote: ${lote}`);
+    if (agri) labels.push(`Agricultor: ${agri}`);
+    if (this.filtroNivel()) labels.push(`Nivel: ${this.filtroNivel()}`);
+    if (this.filtroTipo()) labels.push(`Tipo: ${this.filtroTipo()}`);
     return labels;
   });
 
-  constructor() {
-    const textChanges$ = toObservable(this.textQuery);
-    const debouncedText$ = merge(
-      textChanges$.pipe(take(1)),
-      textChanges$.pipe(skip(1), debounceTime(300))
-    ).pipe(
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-      tap(() => this.page.set(1))
-    );
-
-    const immediateSelect$ = toObservable(this.selectQuery).pipe(
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-      tap(() => this.page.set(1))
-    );
-
-    combineLatest([debouncedText$, immediateSelect$, toObservable(this.page).pipe(distinctUntilChanged())])
-      .pipe(
-        map(([text, select, page]) => ({ ...text, ...select, page })),
-        tap(() => {
-          this.loading.set(true);
-          this.error.set(null);
-          this.items.set([]);
-        }),
-        switchMap((q) => {
-          const seq = ++this.loadSeq;
-          const params: Record<string, string | number> = { page: q.page, limit: 10 };
-          if (q.codigo_lote) params['codigo_lote'] = q.codigo_lote;
-          if (q.agricultor) params['nombre'] = q.agricultor;
-          if (q.nivel) params['nivel'] = q.nivel;
-          if (q.tipo) params['tipo'] = q.tipo;
-          return this.api.getPaginated<Alerta>('alertas', params).pipe(
-            map((res) => ({ seq, res })),
-            catchError((err) => {
-              if (seq !== this.loadSeq) return of(null);
-              this.error.set(err?.error?.message || 'Error al cargar alertas');
-              return of({
-                seq,
-                res: {
-                  success: false,
-                  message: '',
-                  data: [] as Alerta[],
-                  pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
-                },
-              });
-            })
-          );
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((payload) => {
-        if (!payload || payload.seq !== this.loadSeq) return;
-        this.items.set(payload.res.data);
-        this.pagination.set(payload.res.pagination);
-        this.loading.set(false);
-      });
+  ngOnInit(): void {
+    this.loadAlertas();
   }
 
-  ngOnInit(): void {
+  ngOnDestroy(): void {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+  }
+
+  onCodigoLoteChange(value: string): void {
+    this.filtroCodigoLote.set(value);
+    this.scheduleReload();
+  }
+
+  onAgricultorChange(value: string): void {
+    this.filtroAgricultor.set(value);
+    this.scheduleReload();
+  }
+
+  onNivelChange(value: string): void {
+    this.filtroNivel.set(value);
     this.page.set(1);
+    this.loadAlertas();
+  }
+
+  onTipoChange(value: string): void {
+    this.filtroTipo.set(value);
+    this.page.set(1);
+    this.loadAlertas();
   }
 
   clearFilters(): void {
@@ -159,22 +97,69 @@ export class AlertasListComponent implements OnInit {
     this.filtroAgricultor.set('');
     this.filtroNivel.set('');
     this.filtroTipo.set('');
+    this.page.set(1);
+    this.loadAlertas();
   }
 
   prevPage(): void {
     if (this.pagination().page > 1) {
       this.page.set(this.pagination().page - 1);
+      this.loadAlertas();
     }
   }
 
   nextPage(): void {
     if (this.pagination().page < this.pagination().totalPages) {
       this.page.set(this.pagination().page + 1);
+      this.loadAlertas();
     }
   }
 
   del(id: number): void {
     if (!confirm('¿Eliminar alerta?')) return;
-    this.store.remove(id).subscribe(() => this.page.set(this.page()));
+    this.store.remove(id).subscribe(() => this.loadAlertas());
+  }
+
+  private scheduleReload(): void {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.page.set(1);
+      this.loadAlertas();
+    }, 300);
+  }
+
+  private loadAlertas(): void {
+    const seq = ++this.loadSeq;
+    this.loading.set(true);
+    this.error.set(null);
+    this.items.set([]);
+
+    const params: Record<string, string | number> = {
+      page: this.page(),
+      limit: 10,
+    };
+
+    const codigo = this.filtroCodigoLote().trim();
+    const agricultor = this.filtroAgricultor().trim();
+    if (codigo) params['codigo_lote'] = codigo;
+    if (agricultor) params['nombre'] = agricultor;
+    if (this.filtroNivel()) params['nivel'] = this.filtroNivel();
+    if (this.filtroTipo()) params['tipo'] = this.filtroTipo();
+
+    this.api.getPaginated<Alerta>('alertas', params).subscribe({
+      next: (res) => {
+        if (seq !== this.loadSeq) return;
+        this.items.set(res.data);
+        this.pagination.set(res.pagination);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        if (seq !== this.loadSeq) return;
+        this.error.set(err?.error?.message || 'Error al cargar alertas');
+        this.items.set([]);
+        this.pagination.set({ page: 1, limit: 10, total: 0, totalPages: 0 });
+        this.loading.set(false);
+      },
+    });
   }
 }

@@ -13,7 +13,7 @@
         name="filtro-codigo-lote"
         placeholder="Ej. LOT-CHU-001"
         [ngModel]="filtroCodigoLote()"
-        (ngModelChange)="filtroCodigoLote.set($event)"
+        (ngModelChange)="onCodigoLoteChange($event)"
       />
     </div>
     <div class="form-group filters-bar__field">
@@ -24,12 +24,12 @@
         name="filtro-agricultor"
         placeholder="Ej. María Quispe"
         [ngModel]="filtroAgricultor()"
-        (ngModelChange)="filtroAgricultor.set($event)"
+        (ngModelChange)="onAgricultorChange($event)"
       />
     </div>
     <div class="form-group filters-bar__field">
       <label>Nivel</label>
-      <select name="filtro-nivel" [ngModel]="filtroNivel()" (ngModelChange)="filtroNivel.set($event)">
+      <select name="filtro-nivel" [ngModel]="filtroNivel()" (ngModelChange)="onNivelChange($event)">
         <option value="">Todos</option>
         <option value="critica">Crítica</option>
         <option value="advertencia">Advertencia</option>
@@ -38,7 +38,7 @@
     </div>
     <div class="form-group filters-bar__field">
       <label>Tipo</label>
-      <select name="filtro-tipo" [ngModel]="filtroTipo()" (ngModelChange)="filtroTipo.set($event)">
+      <select name="filtro-tipo" [ngModel]="filtroTipo()" (ngModelChange)="onTipoChange($event)">
         <option value="">Todos</option>
         <option value="humedad">Humedad</option>
         <option value="temperatura">Temperatura</option>
@@ -60,7 +60,9 @@
       @for (label of activeFilterLabels(); track label) {
         <span class="filter-chip">{{ label }}</span>
       }
-      <span class="filters-bar__count">{{ pagination().total }} resultado(s)</span>
+      <span class="filters-bar__count">
+        Mostrando {{ items().length }} de {{ pagination().total }} resultado(s)
+      </span>
     </div>
   }
 </div>
