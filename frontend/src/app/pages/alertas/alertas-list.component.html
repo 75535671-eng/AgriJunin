@@ -89,4 +89,31 @@
       <p class="empty">No hay alertas con los filtros seleccionados</p>
     }
   </div>
+
+  @if (store.pagination().totalPages > 1) {
+    <div class="pagination">
+      <button
+        type="button"
+        class="btn btn--outline btn--sm"
+        [disabled]="store.pagination().page <= 1"
+        (click)="store.setPage(store.pagination().page - 1)"
+      >
+        Anterior
+      </button>
+      <span>
+        Página {{ store.pagination().page }} de {{ store.pagination().totalPages }}
+        · {{ store.pagination().total }} alerta(s)
+      </span>
+      <button
+        type="button"
+        class="btn btn--outline btn--sm"
+        [disabled]="store.pagination().page >= store.pagination().totalPages"
+        (click)="store.setPage(store.pagination().page + 1)"
+      >
+        Siguiente
+      </button>
+    </div>
+  } @else if (store.pagination().total > 0) {
+    <p class="results-count">{{ store.pagination().total }} alerta(s) encontrada(s)</p>
+  }
 }

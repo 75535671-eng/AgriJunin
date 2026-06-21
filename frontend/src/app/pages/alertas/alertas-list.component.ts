@@ -24,29 +24,30 @@ export class AlertasListComponent implements OnInit {
   protected readonly nivel = signal('');
   protected readonly tipo = signal('');
 
+  private filterDebounce: ReturnType<typeof setTimeout> | null = null;
+
   ngOnInit(): void {
-    this.store.setPage(1);
-    this.applyFilters();
+    this.syncStoreFilters();
   }
 
   onCodigoLoteChange(value: string): void {
     this.codigoLote.set(value);
-    this.applyFilters();
+    this.scheduleFilterSync();
   }
 
   onNombreChange(value: string): void {
     this.nombre.set(value);
-    this.applyFilters();
+    this.scheduleFilterSync();
   }
 
   onNivelChange(value: string): void {
     this.nivel.set(value);
-    this.applyFilters();
+    this.syncStoreFilters();
   }
 
   onTipoChange(value: string): void {
     this.tipo.set(value);
-    this.applyFilters();
+    this.syncStoreFilters();
   }
 
   clearFilters(): void {
@@ -54,10 +55,10 @@ export class AlertasListComponent implements OnInit {
     this.nombre.set('');
     this.nivel.set('');
     this.tipo.set('');
-    this.applyFilters();
+    this.syncStoreFilters();
   }
 
-  private applyFilters(): void {
+  private buildFilters(): Record<string, string> {
     const filters: Record<string, string> = {};
     const codigo = this.codigoLote().trim();
     const nombre = this.nombre().trim();
@@ -65,8 +66,16 @@ export class AlertasListComponent implements OnInit {
     if (nombre) filters['nombre'] = nombre;
     if (this.nivel()) filters['nivel'] = this.nivel();
     if (this.tipo()) filters['tipo'] = this.tipo();
-    this.store.setFilters(filters);
-    this.store.setPage(1);
+    return filters;
+  }
+
+  private scheduleFilterSync(): void {
+    if (this.filterDebounce) clearTimeout(this.filterDebounce);
+    this.filterDebounce = setTimeout(() => this.syncStoreFilters(), 350);
+  }
+
+  private syncStoreFilters(): void {
+    this.store.applyFilters(this.buildFilters());
   }
 
   del(id: number): void {

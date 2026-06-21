@@ -23,6 +23,7 @@ export class EntityStore<T> {
   private readonly _pagination = signal<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   private readonly _search = signal('');
   private readonly _filters = signal<QueryParams>({});
+  private _loadSeq = 0;
 
   readonly items = this._items.asReadonly();
   readonly loading = this._loading.asReadonly();
@@ -43,8 +44,17 @@ export class EntityStore<T> {
     this._filters.set(filters);
   }
 
+  /** Aplica filtros, reinicia a página 1 y recarga (una sola petición). */
+  applyFilters(filters: QueryParams): void {
+    this._filters.set(filters);
+    this._pagination.update((p) => ({ ...p, page: 1 }));
+    this.load();
+  }
+
   clearFilters(): void {
     this._filters.set({});
+    this._pagination.update((p) => ({ ...p, page: 1 }));
+    this.load();
   }
 
   filters(): QueryParams {
@@ -52,6 +62,7 @@ export class EntityStore<T> {
   }
 
   load(extra: QueryParams = {}): void {
+    const seq = ++this._loadSeq;
     this._loading.set(true);
     this._error.set(null);
     this.api
@@ -64,11 +75,13 @@ export class EntityStore<T> {
       })
       .subscribe({
         next: (res) => {
+          if (seq !== this._loadSeq) return;
           this._items.set(res.data);
           this._pagination.set(res.pagination);
           this._loading.set(false);
         },
         error: (err) => {
+          if (seq !== this._loadSeq) return;
           this._error.set(err?.error?.message || 'Error al cargar datos');
           this._loading.set(false);
         },
