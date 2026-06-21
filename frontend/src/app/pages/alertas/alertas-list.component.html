@@ -8,24 +8,28 @@
     <div class="form-group filters-bar__field">
       <label>Código de lote</label>
       <input
-        type="search"
+        type="text"
+        autocomplete="off"
+        name="filtro-codigo-lote"
         placeholder="Ej. LOT-CHU-001"
-        [ngModel]="codigoLote()"
-        (ngModelChange)="codigoLote.set($event)"
+        [ngModel]="filtroCodigoLote()"
+        (ngModelChange)="filtroCodigoLote.set($event)"
       />
     </div>
     <div class="form-group filters-bar__field">
-      <label>Nombre</label>
+      <label>Agricultor</label>
       <input
-        type="search"
-        placeholder="Título, agricultor o lote"
-        [ngModel]="nombre()"
-        (ngModelChange)="nombre.set($event)"
+        type="text"
+        autocomplete="off"
+        name="filtro-agricultor"
+        placeholder="Ej. María Quispe"
+        [ngModel]="filtroAgricultor()"
+        (ngModelChange)="filtroAgricultor.set($event)"
       />
     </div>
     <div class="form-group filters-bar__field">
       <label>Nivel</label>
-      <select [ngModel]="nivel()" (ngModelChange)="nivel.set($event)">
+      <select name="filtro-nivel" [ngModel]="filtroNivel()" (ngModelChange)="filtroNivel.set($event)">
         <option value="">Todos</option>
         <option value="critica">Crítica</option>
         <option value="advertencia">Advertencia</option>
@@ -34,7 +38,7 @@
     </div>
     <div class="form-group filters-bar__field">
       <label>Tipo</label>
-      <select [ngModel]="tipo()" (ngModelChange)="tipo.set($event)">
+      <select name="filtro-tipo" [ngModel]="filtroTipo()" (ngModelChange)="filtroTipo.set($event)">
         <option value="">Todos</option>
         <option value="humedad">Humedad</option>
         <option value="temperatura">Temperatura</option>
@@ -67,7 +71,7 @@
   <p class="empty">{{ error() }}</p>
 } @else {
   <div class="alerts-grid">
-    @for (a of visibleItems(); track a.id) {
+    @for (a of items(); track a.id) {
       <div class="card alert-card" [class.alert-card--critica]="a.nivel==='critica'">
         <div class="alert-card__header">
           <span class="badge" [class.badge--danger]="a.nivel==='critica'" [class.badge--warning]="a.nivel==='advertencia'" [class.badge--info]="a.nivel==='info'">{{ a.nivel }}</span>

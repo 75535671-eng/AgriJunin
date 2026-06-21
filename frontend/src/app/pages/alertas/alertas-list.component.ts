@@ -9,8 +9,11 @@ import {
   debounceTime,
   distinctUntilChanged,
   map,
+  merge,
   of,
+  skip,
   switchMap,
+  take,
   tap,
 } from 'rxjs';
 import { AlertasStore } from '../../services/entity.service';
@@ -20,9 +23,9 @@ import { AuthStateService } from '../../core/services/auth-state.service';
 import { RelationBannerComponent } from '../../shared/components/relation-banner/relation-banner.component';
 import { Alerta, Pagination } from '../../models';
 
-interface AlertaFilters {
+interface AlertaQuery {
   codigo_lote: string;
-  nombre: string;
+  agricultor: string;
   nivel: string;
   tipo: string;
 }
@@ -42,10 +45,10 @@ export class AlertasListComponent implements OnInit {
   protected readonly auth = inject(AuthStateService);
   protected readonly router = inject(Router);
 
-  protected readonly codigoLote = signal('');
-  protected readonly nombre = signal('');
-  protected readonly nivel = signal('');
-  protected readonly tipo = signal('');
+  protected readonly filtroCodigoLote = signal('');
+  protected readonly filtroAgricultor = signal('');
+  protected readonly filtroNivel = signal('');
+  protected readonly filtroTipo = signal('');
   protected readonly page = signal(1);
 
   protected readonly items = signal<Alerta[]>([]);
@@ -58,89 +61,104 @@ export class AlertasListComponent implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
 
-  private readonly filters = computed<AlertaFilters>(() => ({
-    codigo_lote: this.codigoLote().trim(),
-    nombre: this.nombre().trim(),
-    nivel: this.nivel(),
-    tipo: this.tipo(),
+  private loadSeq = 0;
+
+  private readonly textQuery = computed<Pick<AlertaQuery, 'codigo_lote' | 'agricultor'>>(() => ({
+    codigo_lote: this.filtroCodigoLote().trim(),
+    agricultor: this.filtroAgricultor().trim(),
   }));
 
-  protected readonly hasActiveFilters = computed(
-    () =>
-      !!this.filters().codigo_lote ||
-      !!this.filters().nombre ||
-      !!this.filters().nivel ||
-      !!this.filters().tipo
-  );
+  private readonly selectQuery = computed<Pick<AlertaQuery, 'nivel' | 'tipo'>>(() => ({
+    nivel: this.filtroNivel(),
+    tipo: this.filtroTipo(),
+  }));
+
+  private readonly query = computed<AlertaQuery>(() => ({
+    ...this.textQuery(),
+    ...this.selectQuery(),
+  }));
+
+  protected readonly hasActiveFilters = computed(() => {
+    const q = this.query();
+    return !!(q.codigo_lote || q.agricultor || q.nivel || q.tipo);
+  });
 
   protected readonly activeFilterLabels = computed(() => {
-    const f = this.filters();
+    const q = this.query();
     const labels: string[] = [];
-    if (f.codigo_lote) labels.push(`Lote: ${f.codigo_lote}`);
-    if (f.nombre) labels.push(`Nombre: ${f.nombre}`);
-    if (f.nivel) labels.push(`Nivel: ${f.nivel}`);
-    if (f.tipo) labels.push(`Tipo: ${f.tipo}`);
+    if (q.codigo_lote) labels.push(`Lote: ${q.codigo_lote}`);
+    if (q.agricultor) labels.push(`Agricultor: ${q.agricultor}`);
+    if (q.nivel) labels.push(`Nivel: ${q.nivel}`);
+    if (q.tipo) labels.push(`Tipo: ${q.tipo}`);
     return labels;
   });
 
-  /** Segunda capa: asegura que lo mostrado cumple los filtros activos. */
-  protected readonly visibleItems = computed(() =>
-    this.items().filter((a) => this.matchesFilters(a, this.filters()))
-  );
-
   constructor() {
-    combineLatest([
-      toObservable(this.filters).pipe(
-        debounceTime(280),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        tap(() => this.page.set(1))
-      ),
-      toObservable(this.page).pipe(distinctUntilChanged()),
-    ])
+    const textChanges$ = toObservable(this.textQuery);
+    const debouncedText$ = merge(
+      textChanges$.pipe(take(1)),
+      textChanges$.pipe(skip(1), debounceTime(300))
+    ).pipe(
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      tap(() => this.page.set(1))
+    );
+
+    const immediateSelect$ = toObservable(this.selectQuery).pipe(
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      tap(() => this.page.set(1))
+    );
+
+    combineLatest([debouncedText$, immediateSelect$, toObservable(this.page).pipe(distinctUntilChanged())])
       .pipe(
-        switchMap(([filters, page]) => {
+        map(([text, select, page]) => ({ ...text, ...select, page })),
+        tap(() => {
           this.loading.set(true);
           this.error.set(null);
-          const params: Record<string, string | number> = { page, limit: 10 };
-          if (filters.codigo_lote) params['codigo_lote'] = filters.codigo_lote;
-          if (filters.nombre) params['nombre'] = filters.nombre;
-          if (filters.nivel) params['nivel'] = filters.nivel;
-          if (filters.tipo) params['tipo'] = filters.tipo;
+          this.items.set([]);
+        }),
+        switchMap((q) => {
+          const seq = ++this.loadSeq;
+          const params: Record<string, string | number> = { page: q.page, limit: 10 };
+          if (q.codigo_lote) params['codigo_lote'] = q.codigo_lote;
+          if (q.agricultor) params['nombre'] = q.agricultor;
+          if (q.nivel) params['nivel'] = q.nivel;
+          if (q.tipo) params['tipo'] = q.tipo;
           return this.api.getPaginated<Alerta>('alertas', params).pipe(
-            map((res) => ({
-              ...res,
-              data: res.data.filter((a) => this.matchesFilters(a, filters)),
-            })),
+            map((res) => ({ seq, res })),
             catchError((err) => {
+              if (seq !== this.loadSeq) return of(null);
               this.error.set(err?.error?.message || 'Error al cargar alertas');
               return of({
-                success: false,
-                message: '',
-                data: [] as Alerta[],
-                pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+                seq,
+                res: {
+                  success: false,
+                  message: '',
+                  data: [] as Alerta[],
+                  pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+                },
               });
             })
           );
         }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((res) => {
-        this.items.set(res.data);
-        this.pagination.set(res.pagination);
+      .subscribe((payload) => {
+        if (!payload || payload.seq !== this.loadSeq) return;
+        this.items.set(payload.res.data);
+        this.pagination.set(payload.res.pagination);
         this.loading.set(false);
       });
   }
 
   ngOnInit(): void {
-    // Dispara la primera carga vía combineLatest (signals ya inicializados).
     this.page.set(1);
   }
 
   clearFilters(): void {
-    this.codigoLote.set('');
-    this.nombre.set('');
-    this.nivel.set('');
-    this.tipo.set('');
+    this.filtroCodigoLote.set('');
+    this.filtroAgricultor.set('');
+    this.filtroNivel.set('');
+    this.filtroTipo.set('');
   }
 
   prevPage(): void {
@@ -158,23 +176,5 @@ export class AlertasListComponent implements OnInit {
   del(id: number): void {
     if (!confirm('¿Eliminar alerta?')) return;
     this.store.remove(id).subscribe(() => this.page.set(this.page()));
-  }
-
-  private matchesFilters(a: Alerta, f: AlertaFilters): boolean {
-    if (f.nivel && a.nivel !== f.nivel) return false;
-    if (f.tipo && a.tipo !== f.tipo) return false;
-    if (f.codigo_lote) {
-      const code = (a.codigo_lote || '').toLowerCase();
-      if (!code.includes(f.codigo_lote.toLowerCase())) return false;
-    }
-    if (f.nombre) {
-      const term = f.nombre.toLowerCase();
-      const haystack = [a.titulo, a.mensaje, a.agricultor_nombre, a.lote_nombre, a.codigo_lote]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      if (!haystack.includes(term)) return false;
-    }
-    return true;
   }
 }
